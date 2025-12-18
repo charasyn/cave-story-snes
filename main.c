@@ -7,6 +7,7 @@
 
 ---------------------------------------------------------------------------------*/
 #include <snes.h>
+#include "common.h"
 
 #include "./res/soundbank.h"
 
@@ -43,6 +44,8 @@ extern char mariogfx, mariogfx_end;
 extern char mariopal;
 
 extern char snesfont, snespal;
+
+extern char UFTC_Cave, UFTC_Cave_end, PAL_Cave;
 
 //---------------------------------------------------------------------------------
 brrsamples Jump; // The sound for jumping
@@ -247,21 +250,67 @@ int main(void)
     consoleSetTextMapPtr(0x6000);
     consoleSetTextGfxPtr(0x3000);
     consoleInitText(1, 16 * 2, &snesfont, &snespal);
-
     // Set give soundbank
     spcSetBank(&SOUNDBANK__);
-
     // allocate around 10K of sound ram (39 256-byte blocks)
     spcAllocateSoundRegion(39);
-
     // Load music
     spcLoad(MOD_WHATISLOVE);
-
     // Load sample
     spcSetSoundEntry(15, 8, 6, &jumpsndend - &jumpsnd, &jumpsnd, &Jump);
 
-    // Init layer with tiles and init also map length 0x6800 is mandatory for map engine
+    // Init background
     bgSetGfxPtr(1, 0x3000);
+    bgSetMapPtr(1, 0x6000, SC_32x32);
+    bgInitTileSet(0, &UFTC_Cave, &PAL_Cave, 0, (&UFTC_Cave_end - &UFTC_Cave), 16 * 2, BG_16COLORS, 0x2000);
+    bgSetMapPtr(0, 0x6800, SC_64x32);
+
+    // Now Put in 16 color mode and disable Bgs except current
+    setMode(BG_MODE1, 0);
+
+    // Draw a wonderful text :P
+    // Put some text
+    consoleDrawText(6, 16, "MARIOx00  WORLD TIME");
+    consoleDrawText(6, 17, " 00000 ox00 1-1  000");
+
+    // Wait for nothing :P
+    setScreenOn();
+    spcPlay(0);
+    spcSetModuleVolume(100);
+
+    consoleMesenBreakpoint();
+
+    stage_load(0);
+    // Init sprite engine (0x0000 for large, 0x1000 for small)
+    oamInitDynamicSprite(0x0000, 0x1000, 0, 0, OBJ_SIZE8_L16);
+
+    // Object engine activate
+    objInitEngine();
+
+    // Init function for state machine
+    objInitFunctions(0, &marioinit, &marioupdate, NULL);
+
+    // Load all objects into memory
+    objLoadObjects((char *)&objmario);
+    while (1)
+    {
+        //game_main(0);
+        // Update the map regarding the camera
+        mapUpdate();
+
+        // Update all the available objects
+        objUpdateAll();
+
+        // prepare next frame and wait vblank
+        oamInitDynamicSpriteEndFrame();
+        spcProcess();
+        WaitForVBlank();
+        mapVblank();
+        oamVramQueueUpdate();
+    }
+    return 0;
+    // Init layer with tiles and init also map length 0x6800 is mandatory for map engine
+    /*bgSetGfxPtr(1, 0x3000);
     bgSetMapPtr(1, 0x6000, SC_32x32);
     bgInitTileSet(0, &tileset, &tilepal, 0, (&tilesetend - &tileset), 16 * 2, BG_16COLORS, 0x2000);
     bgSetMapPtr(0, 0x6800, SC_64x32);
@@ -314,6 +363,6 @@ int main(void)
         WaitForVBlank();
         mapVblank();
         oamVramQueueUpdate();
-    }
+    }*/
     return 0;
 }

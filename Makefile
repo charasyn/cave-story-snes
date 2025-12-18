@@ -45,6 +45,10 @@ tiles.pic: tiles.png
 	@echo convert map tileset... $(notdir $@)
 	$(GFXCONV) -s 8 -o 16 -u 16 -p -m -i $<
 
+PrtCave_vert.pic: PrtCave_vert.png
+	@echo convert map tileset... $(notdir $@)
+	$(GFXCONV) -s 8 -o 16 -u 16 -p -m -R -i  $<
+
 map_1_1.m16: map_1_1.tmj tiles.pic
 	@echo convert map tiled ... $(notdir $@)
 	$(TMXCONV) $< tiles.map
@@ -53,4 +57,4 @@ mariofont.pic: mariofont.bmp
 	@echo convert font with no tile reduction ... $(notdir $@)
 	$(GFXCONV) -s 8 -o 2 -u 16 -e 1 -p -t bmp -m -R -i $<
 
-bitmaps : pvsneslibfont.pic dancer.pic  tiles.pic mariofont.pic map_1_1.m16 mario_sprite.pic
+bitmaps : pvsneslibfont.pic dancer.pic PrtCave_vert.pic tiles.pic mariofont.pic map_1_1.m16 mario_sprite.pic

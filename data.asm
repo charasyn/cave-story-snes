@@ -32,6 +32,27 @@ jumpsnd: .incbin "mariojump.brr"
 jumpsndend:
 
 
+PXM_Cave:
+.incbin "dancer.pal"
+PXM_Cave_end:
+
+PAL_Cave:
+.incbin "PrtCave_vert.pal"
+PAL_Cave_end:
+
+PXA_Cave:
+.incbin "Cave.pxa"
+PXA_Cave_end:
+
+PXE_Cave:
+.incbin "Cave.pxe"
+PXE_Cave_end:
+
+UFTC_Cave:
+.incbin "PrtCave_vert.pic"
+UFTC_Cave_end:
+
+
 .ends
 
 .section ".rodata2" superfree
