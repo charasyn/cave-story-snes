@@ -23,9 +23,10 @@ export ROMNAME := cave-story-snes
 SMCONVFLAGS	:= -s -o $(SOUNDBANK) -i -V -b 3
 musics: $(SOUNDBANK).obj
 
-all: musics bitmaps $(ROMNAME).sfc
+all: musics mariojump.brr bitmaps $(ROMNAME).sfc
 
 clean: cleanBuildRes cleanRom cleanGfx cleanAudio
+	@rm -f *.clm mariojump.brr
 
 #---------------------------------------------------------------------------------
 pvsneslibfont.pic: pvsneslibfont.bmp
@@ -36,4 +37,20 @@ dancer.pic: dancer.png
 	@echo convert font with no tile reduction ... $(notdir $@)
 	$(GFXCONV) -s 32 -o 4 -u 16 -p -t png -i $<
 
-bitmaps : pvsneslibfont.pic dancer.pic
+mario_sprite.pic: mario_sprite.bmp
+	@echo convert sprites ... $(notdir $@)
+	$(GFXCONV) -s 16 -o 16 -u 16 -p -t bmp -i $<
+
+tiles.pic: tiles.png
+	@echo convert map tileset... $(notdir $@)
+	$(GFXCONV) -s 8 -o 16 -u 16 -p -m -i $<
+
+map_1_1.m16: map_1_1.tmj tiles.pic
+	@echo convert map tiled ... $(notdir $@)
+	$(TMXCONV) $< tiles.map
+
+mariofont.pic: mariofont.bmp
+	@echo convert font with no tile reduction ... $(notdir $@)
+	$(GFXCONV) -s 8 -o 2 -u 16 -e 1 -p -t bmp -m -R -i $<
+
+bitmaps : pvsneslibfont.pic dancer.pic  tiles.pic mariofont.pic map_1_1.m16 mario_sprite.pic

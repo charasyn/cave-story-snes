@@ -1,38 +1,236 @@
 /*---------------------------------------------------------------------------------
-    Simple music (>32k) demo
+
+
+    Simple game with map and sprite engine demo
+    -- alekmaul
+
+
 ---------------------------------------------------------------------------------*/
 #include <snes.h>
 
-#include "res/soundbank.h"
+#include "./res/soundbank.h"
 
-#define max_colors 6
-
-extern char snesfont, snespal, dancermap, dancerpal;
-
-// soundbank that are declared in soundbank.asm
+//---------------------------------------------------------------------------------
 extern char SOUNDBANK__;
+extern char jumpsnd, jumpsndend;
 
-unsigned short color_table[] = {0x001F, 0x03FF, 0x03E0, 0x7FE0, 0x7C00, 0x7C1F};
-char lyrics;
+//---------------------------------------------------------------------------------
+#define GRAVITY 48
+#define JUMPVALUE (GRAVITY * 20)
 
-s8 flashcolor = 0x1F;
-u8 bgcolor = 0x1F;
-u16 bgsolidcolor = 0x1F;
+#define MARIO_MAXACCEL 0x0140
+#define MARIO_ACCEL 0x0038
+#define MARIO_JUMPING 0x0394
+#define MARIO_HIJUMPING 0x0594
 
-u8 set;
-u8 dance_0 = 0;
-u8 dance_1 = 0;
-u8 dance_anim = 32;
-u8 dance_anim_set_0 = 0;
-u8 dance_anim_set_1 = 0;
-u8 dancer_x = 127;
-u8 dancer_dir = 1;
-u16 dancer_pose_cnt = 0;
-u8 dancer_pose = 0;
-u8 lyrics_part = 0;
-u16 lyrics_cycle = 0;
-u8 bg_inc = 0;
-u8 bgscolsel = 0;
+enum
+{
+    MARIODOWN = 0,
+    MARIOJUMPING = 1,
+    MARIOWALK = 2,
+    MARIOSTAND = 6
+}; // Mario state
+
+//---------------------------------------------------------------------------------
+extern char tileset, tilesetend, tilepal;
+extern char tilesetdef, tilesetatt; // for map & tileset of map
+
+extern char mapmario, objmario;
+
+extern char mariogfx, mariogfx_end;
+extern char mariopal;
+
+extern char snesfont, snespal;
+
+//---------------------------------------------------------------------------------
+brrsamples Jump; // The sound for jumping
+
+u16 pad0; // pad variable
+
+t_objs *marioobj;             // pointer to mario object
+s16 *marioox, *mariooy;       // basics x/y coordinates pointers with fixed point
+s16 *marioxv, *marioyv;       // basics x/y velocity pointers with fixed point
+u16 mariox, marioy;           // x & y coordinates of mario with map depth (not only screen)
+u8 mariofidx, marioflp, flip; // to manage sprite display
+
+//---------------------------------------------------------------------------------
+// Init function for mario object
+void marioinit(u16 xp, u16 yp, u16 type, u16 minx, u16 maxx)
+{
+    // to have a little message regarding init (DO NOT USE FOR REAL SNES GAME, JUST DEBUGGING PURPOSE)
+    consoleNocashMessage("marioinit %d %d\n", (u16)xp, (u16)yp);
+
+    // prepare new object
+    if (objNew(type, xp, yp) == 0)
+        // no more space, get out
+        return;
+
+    // Init some vars for snes sprite (objgetid is the current object id)
+    objGetPointer(objgetid);
+    marioobj = &objbuffers[objptr - 1];
+    marioobj->width = 16;
+    marioobj->height = 16;
+
+    // grab the coordinates & velocity pointers
+    marioox = (u16 *)&(marioobj->xpos + 1);
+    mariooy = (u16 *)&(marioobj->ypos + 1);
+    marioxv = (short *)&(marioobj->xvel);
+    marioyv = (short *)&(marioobj->yvel);
+
+    // update some variables for mario
+    mariofidx = 0;
+    marioflp = 0;
+    marioobj->action = ACT_STAND;
+
+    // prepare dynamic sprite object
+    oambuffer[0].oamframeid = 6;
+    oambuffer[0].oamrefresh = 1;
+    oambuffer[0].oamattribute = 0x60 | (0 << 1); // palette 0 of sprite and sprite 16x16 and priority 2 and flip sprite
+    oambuffer[0].oamgraphics = &mariogfx;
+
+    // Init Sprites palette
+    setPalette(&mariopal, 128 + 0 * 16, 16 * 2);
+}
+
+//---------------------------------------------------------------------------------
+// mario walk management
+void mariowalk(u8 idx)
+{
+    // update animation
+    flip++;
+    if ((flip & 3) == 3)
+    {
+        mariofidx++;
+        mariofidx = mariofidx & 1;
+        oambuffer[0].oamframeid = marioflp + mariofidx;
+        oambuffer[0].oamrefresh = 1;
+    }
+
+    // check if we are still walking or not with the velocity properties of object
+    if (*marioyv != 0)
+        marioobj->action = ACT_FALL;
+    else if ((*marioxv == 0) && (*marioyv == 0))
+        marioobj->action = ACT_STAND;
+}
+
+//---------------------------------------------------------------------------------
+// mario fall management
+void mariofall(u8 idx)
+{
+    // if no more falling, just stand
+    if (*marioyv == 0)
+    {
+        marioobj->action = ACT_STAND;
+        oambuffer[0].oamframeid = 6;
+        oambuffer[0].oamrefresh = 1;
+    }
+}
+
+//---------------------------------------------------------------------------------
+// mario jump management
+void mariojump(u8 idx)
+{
+    // change sprite
+    if (oambuffer[0].oamframeid != 1)
+    {
+        oambuffer[0].oamframeid = 1;
+        oambuffer[0].oamrefresh = 1;
+    }
+
+    // if no more jumping, then fall
+    if (*marioyv >= 0)
+        marioobj->action = ACT_FALL;
+}
+
+//---------------------------------------------------------------------------------
+// Update function for mario object
+void marioupdate(u8 idx)
+{
+    // Get pad value, no move for the moment
+    pad0 = padsCurrent(0);
+
+    // check only the keys for the game
+    if (pad0 & (KEY_RIGHT | KEY_LEFT | KEY_A))
+    {
+        // go to the left
+        if (pad0 & KEY_LEFT)
+        {
+            // update anim (sprites 2-3)
+            if ((marioflp > 3) || (marioflp < 2))
+            {
+                marioflp = 2;
+            }
+            oambuffer[0].oamattribute &= ~0x40; // do not flip sprite
+
+            // update velocity
+            marioobj->action = ACT_WALK;
+            *marioxv -= (MARIO_ACCEL);
+            if (*marioxv <= (-MARIO_MAXACCEL))
+                *marioxv = (-MARIO_MAXACCEL);
+        }
+        // go to the right
+        if (pad0 & KEY_RIGHT)
+        {
+            // update anim (sprites 2-3)
+            if ((marioflp > 3) || (marioflp < 2))
+            {
+                marioflp = 2;
+            }
+            oambuffer[0].oamattribute |= 0x40; // flip sprite
+
+            // update velocity
+            marioobj->action = ACT_WALK;
+            *marioxv += (MARIO_ACCEL);
+            if (*marioxv >= (MARIO_MAXACCEL))
+                *marioxv = (MARIO_MAXACCEL);
+        }
+        // jump
+        if (pad0 & KEY_A)
+        {
+            // we can jump only if we are on ground
+            if ((marioobj->tilestand != 0))
+            {
+                marioobj->action = ACT_JUMP;
+                // if key up, jump 2x more
+                if (pad0 & KEY_UP)
+                    *marioyv = -(MARIO_HIJUMPING);
+                else
+                    *marioyv = -(MARIO_JUMPING);
+                spcPlaySound(0);
+            }
+        }
+    }
+
+    // 1st, check collision with map
+    objCollidMap(idx);
+
+    //  update animation regarding current mario state
+    if (marioobj->action == ACT_WALK)
+        mariowalk(idx);
+    else if (marioobj->action == ACT_FALL)
+        mariofall(idx);
+    else if (marioobj->action == ACT_JUMP)
+        mariojump(idx);
+
+    // Update position
+    objUpdateXY(idx);
+
+    // check boundaries
+    if (*marioox <= 0)
+        *marioox = 0;
+    if (*mariooy <= 0)
+        *mariooy = 0;
+
+    // change sprite coordinates regarding map location
+    mariox = (*marioox);
+    marioy = (*mariooy);
+    oambuffer[0].oamx = mariox - x_pos;
+    oambuffer[0].oamy = marioy - y_pos;
+    oamDynamic16Draw(0);
+
+    // update camera regarding mario object
+    mapUpdateCamera(mariox, marioy);
+}
 
 //---------------------------------------------------------------------------------
 int main(void)
@@ -41,265 +239,76 @@ int main(void)
     spcBoot();
 
     // Initialize text console with our font
-    consoleSetTextMapPtr(0x6800);
+    consoleSetTextMapPtr(0x6000);
     consoleSetTextGfxPtr(0x3000);
-    consoleSetTextOffset(0x0100);
-    consoleInitText(0, 16 * 2, &snesfont, &snespal);
+    consoleInitText(1, 16 * 2, &snesfont, &snespal);
 
-    // Set soundbank available in soundbank.asm.
+    // Set give soundbank
     spcSetBank(&SOUNDBANK__);
 
-    // Load music. Constant is automatically defined in soundbank.h
+    // allocate around 10K of sound ram (39 256-byte blocks)
+    spcAllocateSoundRegion(39);
+
+    // Load music
     spcLoad(MOD_WHATISLOVE);
 
-    // Init background
-    bgSetGfxPtr(0, 0x2000);
-    bgSetMapPtr(0, 0x6800, SC_32x32);
+    // Load sample
+    spcSetSoundEntry(15, 8, 6, &jumpsndend - &jumpsnd, &jumpsnd, &Jump);
 
-    // Now Put in 16 color mode and disable Bgs except current
+    // Init layer with tiles and init also map length 0x6800 is mandatory for map engine
+    bgSetGfxPtr(1, 0x3000);
+    bgSetMapPtr(1, 0x6000, SC_32x32);
+    bgInitTileSet(0, &tileset, &tilepal, 0, (&tilesetend - &tileset), 16 * 2, BG_16COLORS, 0x2000);
+    bgSetMapPtr(0, 0x6800, SC_64x32);
+
+    // Init sprite engine (0x0000 for large, 0x1000 for small)
+    oamInitDynamicSprite(0x0000, 0x1000, 0, 0, OBJ_SIZE8_L16);
+
+    // Object engine activate
+    objInitEngine();
+
+    // Init function for state machine
+    objInitFunctions(0, &marioinit, &marioupdate, NULL);
+
+    // Load all objects into memory
+    objLoadObjects((char *)&objmario);
+
+    // Load map in memory and update it regarding current location of the sprite
+    mapLoad((u8 *)&mapmario, (u8 *)&tilesetdef, (u8 *)&tilesetatt);
+
+    // Now Put in 16 color mode and disable BG3
     setMode(BG_MODE1, 0);
-    bgSetDisable(1);
     bgSetDisable(2);
 
-    // Draw a wonderful text :P
-    consoleDrawText(2, 8, "Let the music play inside a");
-    consoleDrawText(4, 10, "HiROM memory mapped ROM!");
+    // Put some text
+    consoleDrawText(6, 16, "MARIOx00  WORLD TIME");
+    consoleDrawText(6, 17, " 00000 ox00 1-1  000");
 
-    // Let's dance with our dancer
-    oamInitGfxSet(&dancermap, 0x1800, &dancerpal, 4 * 2, 0, 0x0000, OBJ_SIZE32_L64);
-
-    // Syng with program
-    spcFlush();
+    // Put screen on
+    setScreenOn();
 
     // Play file from the beginning
     spcPlay(0);
+    spcSetModuleVolume(100);
+
+    // Wait VBL 'and update sprites too ;-) )
+    WaitForVBlank();
 
     // Wait for nothing :P
-    setScreenOn();
-
-    // Let's dance!!!
     while (1)
     {
-        // Update music / sfx stream and wait vbl
+        // Update the map regarding the camera
+        mapUpdate();
+
+        // Update all the available objects
+        objUpdateAll();
+
+        // prepare next frame and wait vblank
+        oamInitDynamicSpriteEndFrame();
         spcProcess();
         WaitForVBlank();
-
-        if (dance_0 < 62) // let's wait a bit first to sync with music
-            dance_0++;
-        else
-        {
-            // Let's animate our dancers
-            oamSet(0, (dancer_x >> 3) + 0x40, 0x90, 0, dancer_dir, 0, (dance_anim << 2), 0);
-            oamSet(4, (dancer_x >> 3) + 0x60, 0x90, 0, dancer_dir, 0, (dance_anim << 2), 0);
-            oamSet(8, (dancer_x >> 3) + 0x80, 0x90, 0, dancer_dir, 0, (dance_anim << 2), 0);
-
-            dance_anim_set_0++;
-            if (dancer_pose)
-            {
-                if (dance_anim_set_1 == 0)
-                    set = 3;
-                else
-                    set = 4;
-                if (dance_anim_set_0 > set)
-                {
-                    dance_anim++;
-                    dance_anim_set_0 = 0;
-                    dance_anim_set_1++;
-                    if (dance_anim_set_1 > 4)
-                        dance_anim_set_1 = 0;
-                }
-
-                switch (dance_anim)
-                {
-                case 4:
-                    dance_anim = 16;
-                    break;
-                case 18:
-                    dance_anim = 0;
-                    break;
-                }
-
-                if (dancer_dir)
-                    dancer_x++;
-                else
-                    dancer_x--;
-
-                if (dancer_x == 255)
-                    dancer_dir = 0;
-                if (dancer_x == 0)
-                    dancer_dir = 1;
-            }
-            else
-            {
-                if (dance_anim_set_1 == 0)
-                    set = 7;
-                else
-                    set = 6;
-
-                if (dance_anim_set_0 > set)
-                {
-                    dance_anim++;
-                    dance_anim_set_0 = 0;
-                    dance_anim_set_1++;
-                    if (dance_anim_set_1 > 4)
-                        dance_anim_set_1 = 0;
-                }
-
-                if (dance_anim == 36)
-                    dance_anim = 32;
-            }
-
-            dancer_pose_cnt++;
-            if (dancer_pose_cnt > 460)
-            {
-                dancer_pose = !dancer_pose;
-
-                if (dancer_pose)
-                    dance_anim = 0;
-                else
-                    dance_anim = 32;
-                dancer_pose_cnt = 0;
-                bg_inc = 29;
-            }
-
-            // change background color
-            bg_inc++;
-            flashcolor -= 4;
-            if (flashcolor < 0)
-                flashcolor = 0x00;
-            if (flashcolor == 0)
-                bgcolor--;
-
-            if (bg_inc > 28)
-            {
-                bgcolor = 0x1F;
-                flashcolor = 0x1F;
-                bgscolsel++;
-                if (bgscolsel == max_colors)
-                    bgscolsel = 0;
-                bgsolidcolor = color_table[bgscolsel];
-                bg_inc = 0;
-            }
-
-            setPaletteColor(0x00, bgsolidcolor & (bgcolor | (bgcolor << 5) | (bgcolor << 10)) | (flashcolor | (flashcolor << 5) | (flashcolor << 10)));
-        }
-
-        if (dance_1 < 22) // let's wait a bit first to sync with music
-            dance_1++;
-        else
-        {
-            lyrics_cycle++;
-            switch (lyrics_cycle)
-            {
-            case 1:
-                switch (lyrics_part)
-                {
-                case 0:
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 5:
-                case 10:
-                case 11:
-                case 13:
-                case 14:
-                case 15:
-                    consoleDrawText(10, 24, "What is love?");
-                    break;
-                }
-                break;
-            case 81:
-                consoleDrawText(10, 24, "             ");
-                break;
-            case 96:
-                switch (lyrics_part)
-                {
-                case 0:
-                case 4:
-                case 5:
-                case 10:
-                case 11:
-                case 14:
-                case 15:
-                    consoleDrawText(6, 24, "Baby, Don't hurt me");
-                    break;
-                case 6:
-                case 7:
-                    consoleDrawText(8, 24, "Uoououoouooohoo!");
-                    break;
-                }
-                break;
-            case 124:
-                if (lyrics_part == 17)
-                    consoleDrawText(10, 24, "Don't hurt me");
-                break;
-            case 196:
-                consoleDrawText(6, 24, "                   ");
-                break;
-            case 231:
-                switch (lyrics_part)
-                {
-                case 0:
-                case 4:
-                case 5:
-                case 10:
-                case 11:
-                case 14:
-                case 15:
-                    consoleDrawText(10, 24, "Don't hurt me");
-                    break;
-                }
-                break;
-            case 259:
-                switch (lyrics_part)
-                {
-                case 6:
-                case 7:
-                    consoleDrawText(10, 24, "Uoououooohoo!");
-                    break;
-                }
-                break;
-            case 311:
-                consoleDrawText(10, 24, "             ");
-                break;
-            case 346:
-                switch (lyrics_part)
-                {
-                case 0:
-                case 4:
-                case 5:
-                case 10:
-                case 11:
-                case 14:
-                case 15:
-                    consoleDrawText(12, 24, "No more!");
-                    break;
-                case 17:
-                    consoleDrawText(10, 24, "Don't hurt me");
-                    break;
-                }
-                break;
-            case 374:
-                switch (lyrics_part)
-                {
-                case 6:
-                case 7:
-                    consoleDrawText(12, 24, "uuuhuuu!");
-                    break;
-                }
-                break;
-            case 426:
-                consoleDrawText(10, 24, "             ");
-                break;
-            case 461:
-                lyrics_cycle = 0;
-                lyrics_part++;
-                if (lyrics_part == 18)
-                    lyrics_part = 1;
-                break;
-            }
-        }
+        mapVblank();
+        oamVramQueueUpdate();
     }
     return 0;
 }

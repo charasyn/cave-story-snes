@@ -1,10 +1,37 @@
-*.pal
-*.pic
-*.sym
-*.sfc
+# tmx2snes files:
+*.b16
+*.o16
+*.t16
+*.m16
+
+# all other type of files generated automatically
 linkfile
+*.o
+*.a
+*.d
 *.obj
+*.sfc
+*.sym
+*.symfull
+*.pic
+*.pal
+*.map
+*.pc7
+*.mp7
+*.bnk
+*.til
+*.clm
+*.brr
+*.asp
+*.ps
 soundbank.asm
-soundbank.bnk
 soundbank.h
+*.log
+
+# debug files
+*.dbg
+
+# Mac OS cache files
+.DS_Store
+
 *.bak
