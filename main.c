@@ -15,13 +15,15 @@ extern char SOUNDBANK__;
 extern char jumpsnd, jumpsndend;
 
 //---------------------------------------------------------------------------------
-#define GRAVITY 48
-#define JUMPVALUE (GRAVITY * 20)
-
-#define MARIO_MAXACCEL 0x0140
-#define MARIO_ACCEL 0x0038
-#define MARIO_JUMPING 0x0394
-#define MARIO_HIJUMPING 0x0594
+// Physics constants adapted from player.txt
+#define PLAYER_MAX_SPEED 675 / 2   // Max horizontal speed
+#define PLAYER_ACCEL 71        // Ground acceleration
+#define PLAYER_FRICTION 42 / 2     // Ground friction
+#define PLAYER_AIR_ACCEL 27    // Air acceleration
+#define PLAYER_JUMP_SPEED 1066 // Initial vertical speed of a jump (0x42A)
+#define PLAYER_GRAVITY 66 / 2     // Gravity applied when falling (0x42)
+#define PLAYER_GRAVITY_JUMP 26 / 2 // Lighter gravity when holding jump button (0x1A)
+#define PLAYER_MAX_FALL_SPEED 1279 / 2 // Terminal velocity (0x4FF)
 
 enum
 {
@@ -45,7 +47,7 @@ extern char snesfont, snespal;
 //---------------------------------------------------------------------------------
 brrsamples Jump; // The sound for jumping
 
-u16 pad0; // pad variable
+u16 pad0, old_pad0; // pad variables
 
 t_objs *marioobj;             // pointer to mario object
 s16 *marioox, *mariooy;       // basics x/y coordinates pointers with fixed point
@@ -79,13 +81,13 @@ void marioinit(u16 xp, u16 yp, u16 type, u16 minx, u16 maxx)
 
     // update some variables for mario
     mariofidx = 0;
-    marioflp = 0;
-    marioobj->action = ACT_STAND;
+    marioflp = 2; // Start with walk animation frames
+    flip = 0;
 
     // prepare dynamic sprite object
     oambuffer[0].oamframeid = 6;
     oambuffer[0].oamrefresh = 1;
-    oambuffer[0].oamattribute = 0x60 | (0 << 1); // palette 0 of sprite and sprite 16x16 and priority 2 and flip sprite
+    oambuffer[0].oamattribute = 0x60 | (0 << 1); // palette 0 of sprite and sprite 16x16 and priority 2
     oambuffer[0].oamgraphics = &mariogfx;
 
     // Init Sprites palette
@@ -93,126 +95,126 @@ void marioinit(u16 xp, u16 yp, u16 type, u16 minx, u16 maxx)
 }
 
 //---------------------------------------------------------------------------------
-// mario walk management
-void mariowalk(u8 idx)
+// Horizontal movement physics from player.txt
+void player_update_walk()
 {
-    // update animation
-    flip++;
-    if ((flip & 3) == 3)
+    s16 acc, fric;
+    u8 is_grounded = (marioobj->tilestand != 0);
+
+    if (is_grounded)
     {
-        mariofidx++;
-        mariofidx = mariofidx & 1;
-        oambuffer[0].oamframeid = marioflp + mariofidx;
-        oambuffer[0].oamrefresh = 1;
+        acc = PLAYER_ACCEL;
+        fric = PLAYER_FRICTION;
+    }
+    else
+    {
+        acc = PLAYER_AIR_ACCEL;
+        fric = 0;
     }
 
-    // check if we are still walking or not with the velocity properties of object
-    if (*marioyv != 0)
-        marioobj->action = ACT_FALL;
-    else if ((*marioxv == 0) && (*marioyv == 0))
-        marioobj->action = ACT_STAND;
+    // Apply acceleration based on input
+    if (pad0 & KEY_LEFT)
+    {
+        if (*marioxv > -PLAYER_MAX_SPEED)
+            *marioxv -= acc;
+    }
+    if (pad0 & KEY_RIGHT)
+    {
+        if (*marioxv < PLAYER_MAX_SPEED)
+            *marioxv += acc;
+    }
+
+    // Apply friction only on the ground
+    if (is_grounded)
+    {
+        if (abs(*marioxv) <= fric)
+            *marioxv = 0;
+        else if (*marioxv < 0)
+            *marioxv += fric;
+        else if (*marioxv > 0)
+            *marioxv -= fric;
+    }
 }
 
 //---------------------------------------------------------------------------------
-// mario fall management
-void mariofall(u8 idx)
+// Vertical movement (jump and gravity) physics from player.txt
+void player_update_jump()
 {
-    // if no more falling, just stand
-    if (*marioyv == 0)
-    {
-        marioobj->action = ACT_STAND;
-        oambuffer[0].oamframeid = 6;
-        oambuffer[0].oamrefresh = 1;
-    }
-}
+    u8 is_grounded = (marioobj->tilestand != 0);
 
-//---------------------------------------------------------------------------------
-// mario jump management
-void mariojump(u8 idx)
-{
-    // change sprite
-    if (oambuffer[0].oamframeid != 1)
+    // Initiate jump if on the ground and jump button is just pressed
+    if (is_grounded && (pad0 & KEY_A) && !(old_pad0 & KEY_A))
     {
-        oambuffer[0].oamframeid = 1;
-        oambuffer[0].oamrefresh = 1;
+        *marioyv = -PLAYER_JUMP_SPEED;
+        spcPlaySound(0);
     }
+    // Apply gravity
+    else if (!is_grounded)
+    {
+        // Lighter gravity if holding jump button (variable jump height)
+        if ((pad0 & KEY_A) && (*marioyv < 0))
+        {
+            *marioyv += PLAYER_GRAVITY_JUMP;
+        }
+        else
+        {
+            *marioyv += PLAYER_GRAVITY;
+        }
 
-    // if no more jumping, then fall
-    if (*marioyv >= 0)
-        marioobj->action = ACT_FALL;
+        // Clamp to terminal velocity
+        if (*marioyv > PLAYER_MAX_FALL_SPEED)
+            *marioyv = PLAYER_MAX_FALL_SPEED;
+    }
 }
 
 //---------------------------------------------------------------------------------
 // Update function for mario object
 void marioupdate(u8 idx)
 {
-    // Get pad value, no move for the moment
+    // Get pad value
     pad0 = padsCurrent(0);
 
-    // check only the keys for the game
-    if (pad0 & (KEY_RIGHT | KEY_LEFT | KEY_A))
+    // Update physics based on player.txt logic
+    player_update_walk();
+    player_update_jump();
+
+    // 1st, check collision with map. This will update marioobj->tilestand.
+    objCollidMap(idx);
+
+    // Update animation and sprite direction
+    if (marioobj->tilestand != 0) // On the ground
     {
-        // go to the left
-        if (pad0 & KEY_LEFT)
+        if (*marioxv == 0) // Standing still
         {
-            // update anim (sprites 2-3)
-            if ((marioflp > 3) || (marioflp < 2))
-            {
-                marioflp = 2;
-            }
-            oambuffer[0].oamattribute &= ~0x40; // do not flip sprite
-
-            // update velocity
-            marioobj->action = ACT_WALK;
-            *marioxv -= (MARIO_ACCEL);
-            if (*marioxv <= (-MARIO_MAXACCEL))
-                *marioxv = (-MARIO_MAXACCEL);
+            oambuffer[0].oamframeid = MARIOSTAND;
+            oambuffer[0].oamrefresh = 1;
         }
-        // go to the right
-        if (pad0 & KEY_RIGHT)
+        else // Walking
         {
-            // update anim (sprites 2-3)
-            if ((marioflp > 3) || (marioflp < 2))
-            {
-                marioflp = 2;
-            }
-            oambuffer[0].oamattribute |= 0x40; // flip sprite
+            // Set sprite direction
+            if (*marioxv > 0)
+                oambuffer[0].oamattribute |= 0x40; // flip sprite to the right
+            else
+                oambuffer[0].oamattribute &= ~0x40; // do not flip (left)
 
-            // update velocity
-            marioobj->action = ACT_WALK;
-            *marioxv += (MARIO_ACCEL);
-            if (*marioxv >= (MARIO_MAXACCEL))
-                *marioxv = (MARIO_MAXACCEL);
-        }
-        // jump
-        if (pad0 & KEY_A)
-        {
-            // we can jump only if we are on ground
-            if ((marioobj->tilestand != 0))
+            // Update walking animation frame
+            flip++;
+            if ((flip & 3) == 3)
             {
-                marioobj->action = ACT_JUMP;
-                // if key up, jump 2x more
-                if (pad0 & KEY_UP)
-                    *marioyv = -(MARIO_HIJUMPING);
-                else
-                    *marioyv = -(MARIO_JUMPING);
-                spcPlaySound(0);
+                mariofidx++;
+                mariofidx = mariofidx & 1;
+                oambuffer[0].oamframeid = marioflp + mariofidx;
+                oambuffer[0].oamrefresh = 1;
             }
         }
     }
+    else // In the air
+    {
+        oambuffer[0].oamframeid = MARIOJUMPING;
+        oambuffer[0].oamrefresh = 1;
+    }
 
-    // 1st, check collision with map
-    objCollidMap(idx);
-
-    //  update animation regarding current mario state
-    if (marioobj->action == ACT_WALK)
-        mariowalk(idx);
-    else if (marioobj->action == ACT_FALL)
-        mariofall(idx);
-    else if (marioobj->action == ACT_JUMP)
-        mariojump(idx);
-
-    // Update position
+    // Update position based on velocity
     objUpdateXY(idx);
 
     // check boundaries
@@ -230,6 +232,9 @@ void marioupdate(u8 idx)
 
     // update camera regarding mario object
     mapUpdateCamera(mariox, marioy);
+
+    // Store current pad state for next frame
+    old_pad0 = pad0;
 }
 
 //---------------------------------------------------------------------------------
