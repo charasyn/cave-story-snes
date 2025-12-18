@@ -51,7 +51,7 @@ typedef uint32_t u32;
 
 // On PAL the screen height is 16 pixels more, so these can't be constants
 //extern uint8_t SCREEN_HEIGHT;
-//extern uint8_t SCREEN_HALF_H;
+#define SCREEN_HALF_H 224 / 2
 //extern uint8_t FPS;
 
 // The original Cave Story is 50 FPS, and an MD can either run at 50 or 60 FPS

@@ -32,7 +32,7 @@ uint8_t paused = 0;
 uint8_t gameFrozen = 0;
 
 // On PAL the screen height is 16 pixels more, so these can't be constants
-uint8_t SCREEN_HALF_H = 0;
+//uint8_t SCREEN_HALF_H = 0;
 uint8_t FPS = 0;
 
 // Initializes or re-initializes the game after "try again"

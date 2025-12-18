@@ -55,8 +55,8 @@ uint16_t stageWidth, stageHeight = 0;
 // Copy of level layout data loaded into RAM
 // This takes up extra space, but there are times where scripts make modifications to the
 // level layout (allowing player to reach some areas) so it is necessary to do this
- uint8_t stagePXM[8] = {NULL};
- uint8_t stageBlocks[17924] = {NULL};
+ uint8_t stagePXM[8];
+ uint8_t stageBlocks[17924];
 // Which tileset (db/tileset.c) is used by the current stage
  uint8_t stageTileset = 0;
 // Prepares to draw off-screen tiles when stage_update() is later called
@@ -426,7 +426,7 @@ void stage_load_entities() {
 			vdp_set_display(FALSE);
 		}
 	#endif
-		entity_create_ext(block_to_sub(x) + 0x1000, block_to_sub(y) + 0x1000, type, flags, id, event);
+	//	entity_create_ext(block_to_sub(x) + 0x1000, block_to_sub(y) + 0x1000, type, flags, id, event);
 	}
 }
 

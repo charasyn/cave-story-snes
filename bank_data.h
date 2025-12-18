@@ -787,6 +787,6 @@ extern const uint8_t LS_21[];
 //extern const uint32_t BMP_ASCII;
 //extern const uint32_t BMP_KANJI;
 
-//extern const uint32_t STAGE_NAMES;
+extern const uint32_t STAGE_NAMES;
 //extern const uint32_t CREDITS_STR;
 //extern const uint32_t CONFIG_STR;

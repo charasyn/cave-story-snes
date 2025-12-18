@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STAGE_H
+#define STAGE_H
 /*
  * "Stage" refers to a level map. SGDK has a "Map" structure that is not used here,
  * so stage was chosen to avoid conflict
@@ -177,3 +178,4 @@ void stage_update();
 void stage_setup_palettes();
 void stage_draw_screen();
 void stage_draw_background();
+#endif
