@@ -18,7 +18,7 @@
 #include "tables.h"
 //#include "tools.h"
 #include "tsc.h"
-//#include "vdp.h"
+#include "vdp.h"
 #include "weapon.h"
 //
 #include "player.h"
@@ -103,10 +103,11 @@ static void player_prev_weapon();
 static void player_next_weapon();
 
 u8 pal_mode = true;
+Entity *water_entity;
 
 void sound_play(uint8_t id, uint8_t priority)
 {
-
+ 
 }
 void effect_create_smoke(int16_t x, int16_t y){}
 int random()
@@ -464,7 +465,7 @@ void player_update() {
 	if(player.damage_time > 0) {
 		player.damage_time--;
 		if(player.damage_time == 0) {
-			effect_create_damage(player.damage_value, &player, -8, -4);
+			//effect_create_damage(player.damage_value, &player, -8, -4);
 			player.damage_value = 0;
 		}
 	}
@@ -476,7 +477,7 @@ void player_update() {
 				airPercent--;
 				if(airPercent == 0) {
 					// Spoilers
-					if(system_get_flag(ALMOND_DROWN_FLAG)) {
+					/*if(system_get_flag(ALMOND_DROWN_FLAG)) {
 						tsc_call_event(ALMOND_DROWN_EVENT);
 					} else {
 						player.health = 0;
@@ -484,7 +485,7 @@ void player_update() {
 						PLAYER_SPRITE_TILES_QUEUE();
 						tsc_call_event(PLAYER_DROWN_EVENT);
 						return;
-					}
+					}*/
 				}
 			} else {
 				airTick--;
@@ -600,7 +601,7 @@ void player_update() {
 			}
 			w->level = 1;
 			w->energy = 0;
-			hud_force_energy();
+			//hud_force_energy();
 		}
 	} else if(shoot_cooldown) {
 		shoot_cooldown--;
@@ -796,7 +797,7 @@ void player_update_bullets() {
 
 static void player_update_interaction() {
 	// Interaction with entities when pressing down
-	if(cfg_updoor ? joy_pressed(KEY_UP) : joy_pressed(KEY_DOWN)) {
+	/*if(cfg_updoor ? joy_pressed(KEY_UP) : joy_pressed(KEY_DOWN)) {
 		Entity *e = entityList;
 		while(e) {
 			if((e->flags & NPC_INTERACTIVE) && entity_overlapping(&player, e)) {
@@ -816,7 +817,7 @@ static void player_update_interaction() {
 		}
 		// Question mark above head
 		effect_create_misc(EFF_QMARK, (player.x >> CSF), (player.y >> CSF) - 12, TRUE);
-	}
+	}*/
 }
 
 void player_start_booster() {
@@ -1118,23 +1119,24 @@ void player_unpause() {
 uint8_t player_invincible() {
 	return playerIFrames > 0 || tscState;
 }
-
+#define z80_request()
+#define z80_release()
 uint8_t player_inflict_damage(uint16_t damage) {
 	// Show damage numbers
-	effect_create_damage(-damage, &player, 0, 0);
+	//effect_create_damage(-damage, &player, 0, 0);
 	// Take health
 	if((!iSuckAtThisGameSHIT || damage > 99) && player.health <= damage) {
 		// If health reached 0 we are dead
 		player.health = 0;
 		// Clear smoke & fill up with smoke around player
-		effects_clear_smoke();
+		//effects_clear_smoke();
 		uint8_t i;
 		for( i = MAX_SMOKE; i--; ) {
 			effect_create_smoke(sub_to_pixel(player.x) + (random() % 90 ) - 45, 
 								sub_to_pixel(player.y) + (random() % 90 ) - 45);
 		}
 		sound_play(SND_PLAYER_DIE, 15);
-		tsc_call_event(PLAYER_DEFEATED_EVENT);
+		//tsc_call_event(PLAYER_DEFEATED_EVENT);
 		return TRUE;
 	}
 	if(!iSuckAtThisGameSHIT) player.health -= damage;

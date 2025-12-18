@@ -46,7 +46,6 @@ uint8_t cfg_sfx_mute = FALSE;
 
 uint8_t sram_file = 0;
 uint8_t sram_state = SRAM_UNCHECKED;
-uint16_t btn[12];
 
 void effect_create_misc(uint8_t type, int16_t x, int16_t y, uint8_t only_one){}
 

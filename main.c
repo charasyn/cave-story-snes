@@ -285,7 +285,7 @@ int main(void)
 
     consoleMesenBreakpoint();
 
-    stage_load(13);
+    //stage_load(13);
     // Init sprite engine (0x0000 for large, 0x1000 for small)
     oamInitDynamicSprite(0x0000, 0x1000, 0, 0, OBJ_SIZE8_L16);
 
@@ -311,6 +311,8 @@ int main(void)
 
     u8 stage_no = 13;
 
+    joy_init();
+
     while(1) {
         pad0 = padsCurrent(0);
 
@@ -325,27 +327,28 @@ int main(void)
         if (moved) {
             // Only calculate the new row/col
             // (This function handles the WaitForVBlank + DMA internally)
-            stage_update_screen(x, y);
+        //    stage_update_screen(x, y);
         }
 
-        if(pad0 & KEY_L) {stage_no--; stage_load(stage_no); stage_draw_screen(x, y);}
-        if(pad0 & KEY_R) {stage_no++; stage_load(stage_no); stage_draw_screen(x, y);}
+        //if(pad0 & KEY_L) {stage_no--; stage_load(stage_no); stage_draw_screen(x, y);}
+        //if(pad0 & KEY_R) {stage_no++; stage_load(stage_no); stage_draw_screen(x, y);}
 
-        //game_main(0);
+        game_main(0);
         // Update the map regarding the camera
         //mapUpdate();
 
         // Update all the available objects
-        objUpdateAll();
+        //objUpdateAll();
 
         // prepare next frame and wait vblank
-        oamInitDynamicSpriteEndFrame();
+        //oamInitDynamicSpriteEndFrame();
         spcProcess();
         WaitForVBlank();
+        joy_update();
         dmaCopyVram(map_buffer_bg1, 0x6000, map_buffer_bg1);
         dmaCopyVram(map_buffer_bg2, 0x6000, map_buffer_bg2);
         //mapVblank();
-        oamVramQueueUpdate();
+        //oamVramQueueUpdate();
     }
     return 0;
     // Init layer with tiles and init also map length 0x6800 is mandatory for map engine

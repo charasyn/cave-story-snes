@@ -93,7 +93,7 @@ uint16_t map_buffer_bg2[MAP_WIDTH * MAP_HEIGHT];
 // Format: vhopppcc cccccccc
 #define SNES_TILE_ENTRY(tile, palette, prio, hflip, vflip) \
     ((tile & 0x3FF) | ((palette & 7) << 10) | ((prio & 1) << 13) | ((hflip & 1) << 14) | ((vflip & 1) << 15))
-
+#include <snes.h>
 void test_draw_sequential() {
     uint16_t tile_counter = 0;
 
@@ -232,6 +232,9 @@ void stage_load(uint16_t id) {
 	if((playerEquipment & EQUIP_CLOCK) || stageID == STAGE_HELL_B1) system_draw_counter();
 	tsc_load_stage(id);
 	vdp_set_display(TRUE);*/
+	setPaletteColor(0, 0);
+
+
 }
 
 void stage_load_credits(uint8_t id) {

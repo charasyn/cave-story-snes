@@ -2,7 +2,7 @@
 
 //#include "dma.h"
 #include "entity.h"
-//#include "joy.h"
+#include "joy.h"
 #include "player.h"
 #include "stage.h"
 #include "tables.h"
@@ -211,7 +211,7 @@ void camera_update() {
 	if(!morphingColumn && (abs(camera.x_mark - x_next) > 0x1FFF || abs(camera.y_mark - y_next) > 0x1FFF)) {
 		camera.x_mark = x_next;
 		camera.y_mark = y_next;
-		entities_update_inactive();
+		//entities_update_inactive();
 	}
 	// Apply camera position
 	camera.x = x_next;

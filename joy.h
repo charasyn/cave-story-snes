@@ -30,7 +30,7 @@
 #define JOY_TYPE_PAD3           0x00
 #define JOY_TYPE_PAD6           0x01
 
-extern uint16_t btn[12];
+extern const uint16_t btn[12];
 extern const char btnName[12][4];
 
 #define joy_pressed(b) (((joystate&(b))&&((~oldstate)&(b))))

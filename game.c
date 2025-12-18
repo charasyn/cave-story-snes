@@ -1,32 +1,34 @@
 #include "common.h"
 
-//#include "audio.h"
-//#include "camera.h"
+#include "audio.h"
+#include "camera.h"
 //#include "dma.h"
-//#include "effect.h"
-//#include "entity.h"
+#include "effect.h"
+#include "entity.h"
 //#include "error.h"
 //#include "hud.h"
-//#include "joy.h"
+#include "joy.h"
 //#include "pause.h"
-//#include "player.h"
+#include "player.h"
 //#include "resources.h"
-//#include "sheet.h"
-//#include "stage.h"
+#include "sheet.h"
+#include "stage.h"
 //#include "string.h"
-//#include "system.h"
-//#include "tables.h"
+#include "system.h"
+#include "tables.h"
 //#include "tools.h"
 //#include "tsc.h"
-//#include "vdp.h"
-//#include "weapon.h"
+#include "vdp.h"
+#include "weapon.h"
 //#include "window.h"
 //#include "xgm.h"
 //
-//#include "gamemode.h"
+#include "gamemode.h"
 
 //#include "gba.h"
 
+#define z80_request()
+#define z80_release()
 uint8_t gamemode = 0;
 uint8_t paused = 0;
 uint8_t gameFrozen = 0;
@@ -39,6 +41,12 @@ uint8_t FPS = 0;
 //void game_reset(uint8_t load);
 
 void game_reset(uint8_t load) {
+	camera_init();
+
+	stage_load(12);
+
+	player.x = (64 << CSF);
+	player.y = (64 << CSF);
 	/*
 	vdp_map_clear(VDP_PLAN_B);
 	camera_init();
@@ -63,30 +71,32 @@ void game_reset(uint8_t load) {
 	//vdp_colors_next(16, PAL_Sym.data, 16);
 	//vdp_colors(0, PAL_FadeOut, 64);*/
 }
-
+u8 tscState = 0;
+u8 pal_mode = 0;
+u8 joytype = 0;
 void game_main(uint8_t load) {
 
-	/*
+	
 	gamemode = GM_GAME;
 
-	vdp_colors(0, PAL_FadeOut, 64);
+	//vdp_colors(0, PAL_FadeOut, 64);
 	//vdp_color(15, 0x000);
 	// This is the SGDK font with a blue background for the message window
 	if(cfg_language != LANG_JA) {
         disable_ints;
         z80_request();
-		vdp_font_load(TS_MsgFont.tiles);
+		//vdp_font_load(TS_MsgFont.tiles);
         z80_release();
         enable_ints;
 	}
-	effects_init();
+	//effects_init();
 	game_reset(load);
 	vdp_set_window(0, 0);
 	// Load game doesn't run a script that fades in and shows the HUD, so do it manually
 	if(load) {
-		hud_show();
+		//hud_show();
 		stage_setup_palettes();
-		vdp_fade(PAL_FadeOut, NULL, 4, TRUE);
+		//vdp_fade(PAL_FadeOut, NULL, 4, TRUE);
 	}
 	paused = FALSE;
 
@@ -95,13 +105,13 @@ void game_main(uint8_t load) {
 
 		if(paused) {
             PF_BGCOLOR(0x0E0);
-			paused = update_pause();
+			//paused = update_pause();
 		} else {
 			// Pressing start opens the item menu (unless a script is running)
 			if(joy_pressed(btn[cfg_btn_pause]) && !tscState) {
 				// This unloads the stage's script and loads the "ArmsItem" script in its place
-				tsc_load_stage(255);
-				draw_itemmenu(TRUE);
+				//tsc_load_stage(255);
+				//draw_itemmenu(TRUE);
 				paused = TRUE;
 			} else if(joy_pressed(btn[cfg_btn_map]) && joytype == JOY_TYPE_PAD6 
 					&& !tscState && (playerEquipment & EQUIP_MAPSYSTEM)) {
@@ -126,10 +136,10 @@ void game_main(uint8_t load) {
                 enable_ints;
 
 				paused = TRUE; // This will stop the counter in Hell
-				do_map();
+				//do_map();
 				paused = FALSE;
 				vdp_set_display(FALSE);
-				hud_force_redraw();
+				//hud_force_redraw();
 
                 disable_ints;
                 z80_request();
@@ -138,40 +148,41 @@ void game_main(uint8_t load) {
                 enable_ints;
 
 				player_draw();
-				entities_draw();
-				hud_show();
+				//entities_draw();
+				//hud_show();
 				vdp_sprites_update();
 				vdp_set_window(0, 0);
 				vdp_set_display(TRUE);
 			} else {
 				// HUD on top
                 PF_BGCOLOR(0x00E);
-				hud_update();
+				//hud_update();
 				// Boss health, camera
                 PF_BGCOLOR(0x0EE);
 				if(!gameFrozen) {
-					if(showingBossHealth) tsc_update_boss_health();
+					//if(showingBossHealth) tsc_update_boss_health();
 					camera_update();
 				}
 				// Run the next set of commands in a script if it is running
                 PF_BGCOLOR(0x0E0);
-				uint8_t rtn = tsc_update();
+				//uint8_t rtn = tsc_update();
+				u8 rtn = 0;
 				// Nonzero return values exit the game, or switch to the ending sequence
 				if(rtn > 0) {
 					if(rtn == 1) { // Return to title screen
 						SYS_hardReset();
 					} else if(rtn == 2) {
-						vdp_colors(0, PAL_FadeOut, 64);
+						//vdp_colors(0, PAL_FadeOut, 64);
 						vdp_color(15, 0x000);
 						stageBackground = 255; // Force background redraw
 						game_reset(TRUE); // Reload save
-						hud_show();
+						//hud_show();
 						playerIFrames = 0;
 						stage_setup_palettes();
 						vdp_fade(NULL, NULL, 4, TRUE);
 						continue;
 					} else if(rtn == 3) {
-						vdp_colors(0, PAL_FadeOut, 64);
+						//vdp_colors(0, PAL_FadeOut, 64);
 						vdp_color(15, 0x000);
 						game_reset(FALSE); // Start from beginning
 						continue;
@@ -180,21 +191,21 @@ void game_main(uint8_t load) {
 					}
 				}
                 PF_BGCOLOR(0xEE0);
-				window_update();
+				//window_update();
 				// Handle controller locking
 				uint16_t lockstate = joystate, oldlockstate = oldstate;
 				if(controlsLocked) joystate = oldstate = 0;
 				// Don't update this stuff if a script is using <PRI
                 PF_BGCOLOR(0xE00);
-				effects_update();
+				//effects_update();
                 PF_BGCOLOR(0xE0E);
 				if(!gameFrozen) {
 					//GBATODO
 					player_update();
-					entities_update(TRUE);
+				//	entities_update(TRUE);
 				} else {
 					player_draw();
-					entities_draw();
+				//	entities_draw();
 				}
 				// Restore controller locking if it was locked
 				joystate = lockstate;
@@ -204,11 +215,15 @@ void game_main(uint8_t load) {
 			}
 		}
 		PF_BGCOLOR(0xEEE);
-		system_update();
-		ready = TRUE;
+		//system_update();
+		//ready = TRUE;
 		PF_BGCOLOR(0x000);
+		spcProcess();
 		vdp_vsync();
+		dmaCopyVram(map_buffer_bg1, 0x6000, map_buffer_bg1);
+        dmaCopyVram(map_buffer_bg2, 0x6000, map_buffer_bg2);
+		joy_update();
 		PF_BGCOLOR(0x00E);
-		aftervsync();
-	}*/
+		//aftervsync();
+	}
 }
