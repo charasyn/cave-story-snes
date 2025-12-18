@@ -1,0 +1,10 @@
+*.pal
+*.pic
+*.sym
+*.sfc
+linkfile
+*.obj
+soundbank.asm
+soundbank.bnk
+soundbank.h
+*.bak
