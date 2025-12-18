@@ -137,6 +137,9 @@ extern uint16_t *stageTable;
 extern uint8_t stagePXM[];
 extern uint8_t stageBlocks[];
 extern const uint8_t *stagePXA;
+
+extern uint16_t map_buffer_bg1[];
+extern uint16_t map_buffer_bg2[];
 // Which tileset (db/tileset.c) is used by the current stage
 extern uint8_t stageTileset;
 // Prepares to draw off-screen tiles when stage_update() is later called

@@ -79,6 +79,59 @@ static void stage_draw_moonback();
 
 uint16_t stageID = 0;
 
+
+// Define your map size (e.g., 64x32 tiles)
+#define MAP_WIDTH 32
+#define MAP_HEIGHT 32
+
+// Shadow buffers in WRAM (RAM)
+// 64 * 32 tiles = 2048 entries * 2 bytes = 4096 bytes per layer
+uint16_t map_buffer_bg1[MAP_WIDTH * MAP_HEIGHT];
+uint16_t map_buffer_bg2[MAP_WIDTH * MAP_HEIGHT];
+
+// Helper to construct SNES tile entry
+// Format: vhopppcc cccccccc
+#define SNES_TILE_ENTRY(tile, palette, prio, hflip, vflip) \
+    ((tile & 0x3FF) | ((palette & 7) << 10) | ((prio & 1) << 13) | ((hflip & 1) << 14) | ((vflip & 1) << 15))
+
+void test_draw_sequential() {
+    uint16_t tile_counter = 0;
+
+    // Iterate through every tile position on the 32x32 screen
+	uint16_t y;
+    for ( y = 0; y < 32; y++) {
+		uint16_t x;
+        for ( x = 0; x < 32; x++) {
+            
+            // 2. Calculate the linear index
+            // For a 32x32 map on SNES, this is perfectly linear.
+            uint16_t map_offset = (y * 32) + x;
+
+            // 3. Create the tile entry
+            // Format: vhopppcc cccccccc (Flip, Priority, Palette, TileIndex)
+            // We use tile_counter & 0x3FF to keep the index within 0-1023 range.
+            uint16_t tile_index = tile_counter & 0x3FF;
+            uint16_t palette = 0; // Use Palette 0
+            uint16_t priority = 1; // High priority (appears above sprites with low prio)
+
+            // Construct the entry
+            uint16_t entry = tile_index 
+                           | (palette << 10) 
+                           | (priority << 13); 
+
+            // 4. Write to buffer
+            map_buffer_bg1[map_offset] = entry;
+
+            tile_counter++;
+        }
+    }
+
+    // 5. Upload to VRAM
+    // IMPORTANT: Replace '0x6000' with the address you assigned to your BG 
+    // in your init code (e.g., bgSetMapPtr(0, 0x6000, SC_32x32)).
+    //dmaCopyVram(map_buffer_bg1, 0x6000, sizeof(map_buffer_bg1));
+	//dmaCopyVram(map_buffer_bg1, 0x6800, sizeof(map_buffer_bg1));
+}
 void stage_load(uint16_t id) {
 	iprintf("Loading stage %d\n", id);
 	vdp_set_display(FALSE);
@@ -153,7 +206,8 @@ void stage_load(uint16_t id) {
 
     //disable_ints;
     //z80_request();
-	//stage_draw_screen(); // Draw 64x32 foreground PXM area at camera's position
+	//test_draw_sequential(); // Draw 64x32 foreground PXM area at camera's position
+	//stage_draw_screen();
     //z80_release();
     //enable_ints;
 
@@ -306,6 +360,7 @@ void stage_load_blocks() {
     stageHeight = stagePXM[6] | (stagePXM[7] << 8);
 	// Multiplication table for stage rows
 	stageTable = malloc(stageHeight << 1);
+	iprintf(stageTable);
 	//if(!stageTable) error_oom();
 	uint16_t blockTotal = 0;
 	uint16_t y;
@@ -531,47 +586,166 @@ void stage_setup_palettes() {
 	vdp_colors_next(48, stage_info[stageID].npcPalette->data, 16);*/
 }
 
-void stage_draw_screen() {
-    /*const uint8_t *pxa = tileset_info[stageTileset].PXA;
-	uint16_t maprow[64];
-	uint16_t y = sub_to_tile(camera.y) - 16;
-	uint16_t i;
-	for( i = 32; i--; ) {
-		if(vblank) aftervsync(); // So we don't lag the music
-		vblank = 0;
-		
-		if(y < stageHeight + 32 << 1) {
-			uint16_t x = sub_to_tile(camera.x) - 32;
-			uint16_t j;
-			for( j = 64; j--; ) {
-				//if(x >= stageWidth << 1) break;
-				//if(x >= 0) {
-					uint16_t b = stage_get_block(x>>1, y>>1);
-					uint16_t t = b << 2; //((b&15) << 1) + ((b>>4) << 6);
-					uint16_t ta = pxa[b];
-					uint16_t pal = (ta == 0x43 || ta & 0x80) ? PAL1 : PAL2;
-					//maprow[x&63] = TILE_ATTR(pal, (ta&0x40) > 0, 
-					//		0, 0, TILE_TSINDEX + t + (x&1) + ((y&1)<<1));
-					maprow[x&63] = TILE_TSINDEX + t + (x&1) + ((y&1)<<1);
-				//}
-				x++;
-			}
-			//CpuFastSet(maprow, MAP_BASE_ADR(BASE_STAGE) + ((y&31)<<6), 16 | COPY32);
-			//*((u16 *)MAP_BASE_ADR(BASE_STAGE) + 1) = 20;
-			//*((u16 *)MAP_BASE_ADR(BASE_STAGE) + 2) = 21;
-			//DMA_doDma(DMA_VRAM, (uint32_t)maprow, VDP_PLAN_A + ((y&31)<<7), 64, 2);
-		}
-		y++;
-	}
+#include <snes.h>
 
-		/*for(uint16_t i = 32; i--; ) {
-			for(uint16_t j = 64; j--; ) {
-				*((u16 *)MAP_BASE_ADR(BASE_STAGE) + j + (i*64)) = j;
-			}
+// Globals to track previous position
+// Initialize to a value that forces a full redraw on the first frame
+uint16_t last_x = 0xFFFF;
+uint16_t last_y = 0xFFFF;
 
-		}*/
+// Your existing shadow buffers
+
+extern u8 PXA_Cave[];
+void stage_draw_tile(uint16_t x, uint16_t y, const uint8_t* pxa) {
+    // 1. Get Block Info (Same logic as GBA)
+    uint16_t b = stage_get_block(x >> 1, y >> 1);
+    uint16_t t = b << 2; // Base tile index for 16x16 meta-tile
+    uint16_t ta = PXA_Cave[b];
+
+    // 2. Determine Attributes
+    // Adjust these masks based on your specific 'pxa' format data
+    uint16_t palette = (ta & 0x80) ? 0 : 0; // Example: Bit 7 determines palette 0 or 1
+    uint16_t priority = (ta & 0x40) ? 1 : 0; // Example: Bit 6 is priority
+    
+    // Calculate final tile index (0-3) for the specific 8x8 part
+    uint16_t final_tile = TILE_TSINDEX + t + (x & 1) + ((y & 1) << 1);
+
+    // 3. Construct SNES Map Entry
+    uint16_t tile_entry = SNES_TILE_ENTRY(final_tile, palette, priority, 0, 0);
+    uint16_t empty_entry = SNES_TILE_ENTRY(TILE_TSINDEX, 0, 0, 0, 0); // Transparent/Empty tile
+
+    // 4. Calculate SNES Map Address Offset
+    // SNES maps are split into 32x32 chunks (1024 entries each).
+    // If x >= 32, we move to the next 32x32 block which is 1024 words away in memory.
+    // Address = (Y * 32) + (X % 32) + (IsRightHalf ? 1024 : 0)
+    
+    uint16_t map_offset = ((y % 32) * 32) + (x % 32);
+
+    // 5. Write to Shadow Buffers
+    // PVSnesLib doesn't support direct VRAM pointers like MAP_BASE_ADR.
+	if(priority > 0){
+        // Foreground logic
+        map_buffer_bg1[map_offset] = tile_entry;
+        map_buffer_bg2[map_offset] = empty_entry;
+    } else {
+        // Background logic
+        map_buffer_bg1[map_offset] = empty_entry;
+        map_buffer_bg2[map_offset] = tile_entry;
+    }
 }
 
+
+void stage_update_screen(u16 view_x, u16 view_y) {
+    const uint8_t *pxa = tileset_info[stageTileset].PXA;
+
+    // Define the view dimensions (assuming 32x32 view area)
+    const u16 VIEW_W = 32;
+    const u16 VIEW_H = 32;
+		u16 y;
+		u16 x;
+		u16 i;
+    // --- CASE 1: First Run / Force Full Redraw ---
+    if (last_x == 0xFFFF) {
+
+        for ( y = 0; y < VIEW_H; y++) {
+            for ( x = 0; x < VIEW_W; x++) {
+                stage_draw_tile(view_x + x, view_y + y, pxa);
+            }
+        }
+    } 
+    else {
+        // --- CASE 2: Horizontal Movement ---
+        
+        // Moved RIGHT -> Draw new column on the right edge
+        if (view_x > last_x) {
+            u16 draw_x = view_x + VIEW_W - 1; // The right-most column
+            for ( i = 0; i < VIEW_H; i++) {
+                stage_draw_tile(draw_x, view_y + i, pxa);
+            }
+        }
+        // Moved LEFT -> Draw new column on the left edge
+        else if (view_x < last_x) {
+            u16 draw_x = view_x; // The left-most column
+            for ( i = 0; i < VIEW_H; i++) {
+                stage_draw_tile(draw_x, view_y + i, pxa);
+            }
+        }
+
+        // --- CASE 3: Vertical Movement ---
+        
+        // Moved DOWN -> Draw new row at the bottom
+        if (view_y > last_y) {
+            u16 draw_y = view_y + VIEW_H - 1; // The bottom-most row
+            for ( i = 0; i < VIEW_W; i++) {
+                stage_draw_tile(view_x + i, draw_y, pxa);
+            }
+        }
+        // Moved UP -> Draw new row at the top
+        else if (view_y < last_y) {
+            u16 draw_y = view_y; // The top-most row
+            for ( i = 0; i < VIEW_W; i++) {
+                stage_draw_tile(view_x + i, draw_y, pxa);
+            }
+        }
+        
+        // Handle "Corner" cases for diagonal movement
+        // If we moved Right AND Down, the loops above cover the edges, 
+        // but the very corner tile might get drawn twice (which is fine) 
+        // or missed depending on loop order. The logic above covers it 
+        // because the X-loop uses the *new* Y, and Y-loop uses the *new* X.
+    }
+
+    // Update history
+    last_x = view_x;
+    last_y = view_y;
+
+    // --- VRAM Update ---
+    // Wait for VBlank before DMA to prevent tearing/glitches
+    WaitForVBlank();
+    
+    // Copy the updated shadow buffers to VRAM
+    // 0x6000 is your BG1 address, 0x6800 is your BG2 address (check your init!)
+    //dmaCopyVram(map_buffer_bg1, 0x6000, 1024 * 2); // 64x32 map size
+    //dmaCopyVram(map_buffer_bg2, 0x6800, 1024 * 2); 
+    
+    // Update Hardware Scroll
+    // Multiply by 8 to convert tiles to pixels
+    bgSetScroll(0, view_x * 8, view_y * 8);
+    bgSetScroll(1, view_x * 8, view_y * 8);
+}
+
+
+void stage_draw_screen(u16 x, u16 y) {
+    const uint8_t *pxa = tileset_info[stageTileset].PXA;
+
+    // -- Draw Logic (mostly unchanged, just calls the new stage_draw_tile) --
+    uint16_t start_y = x - 16;
+    uint16_t start_x = y - 16;
+
+    // Loop through visible area
+	uint16_t i, j;
+    for ( i = 0; i < 32; i++) {
+        uint16_t y = start_y + i;
+        
+        // Safety check for Y bounds (optional based on your game logic)
+        if (y < (stageHeight + 32) * 2) {
+            
+            for ( j = 0; j < 32; j++) {
+                uint16_t x = start_x + j;
+                stage_draw_tile(x, y, pxa);
+            }
+        }
+    }
+
+    // -- VRAM Update --
+    // This MUST be done during VBlank (use WaitForVBlank() or put in vblank handler)
+    // Assuming BG1 is at address 0x0000 and BG2 is at 0x1000 in VRAM (set via bgSetMapPtr)
+    
+    // Copy the shadow buffers to actual VRAM
+    // 0x6000 and 0x7000 are EXAMPLE VRAM addresses. Use whatever you set in bgSetMapPtr.
+    //dmaCopyVram(map_buffer_bg1, 0x6000, sizeof(map_buffer_bg1));
+	//dmaCopyVram(map_buffer_bg2, 0x6800, sizeof(map_buffer_bg2));
+}
 void stage_draw_screen_credits() {
 	uint16_t maprow[20];
 	uint16_t y;

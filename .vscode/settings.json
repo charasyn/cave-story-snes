@@ -1,0 +1,9 @@
+{
+	"files.associations": {
+		"*.nut": "c",
+		"cstdlib": "c",
+		"*.tcc": "c",
+		"memory": "c",
+		"new": "c"
+	}
+}

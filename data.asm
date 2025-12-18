@@ -33,7 +33,7 @@ jumpsndend:
 
 
 PXM_Cave:
-.incbin "dancer.pal"
+.incbin "Cave.cpxm"
 PXM_Cave_end:
 
 PAL_Cave:

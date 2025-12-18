@@ -240,6 +240,8 @@ void marioupdate(u8 idx)
     old_pad0 = pad0;
 }
 
+
+#include "stage.h"
 //---------------------------------------------------------------------------------
 int main(void)
 {
@@ -247,9 +249,9 @@ int main(void)
     spcBoot();
 
     // Initialize text console with our font
-    consoleSetTextMapPtr(0x6000);
-    consoleSetTextGfxPtr(0x3000);
-    consoleInitText(1, 16 * 2, &snesfont, &snespal);
+    //consoleSetTextMapPtr(0x6000);
+    //consoleSetTextGfxPtr(0x3000);
+    //consoleInitText(1, 16 * 2, &snesfont, &snespal);
     // Set give soundbank
     spcSetBank(&SOUNDBANK__);
     // allocate around 10K of sound ram (39 256-byte blocks)
@@ -260,18 +262,20 @@ int main(void)
     spcSetSoundEntry(15, 8, 6, &jumpsndend - &jumpsnd, &jumpsnd, &Jump);
 
     // Init background
-    bgSetGfxPtr(1, 0x3000);
-    bgSetMapPtr(1, 0x6000, SC_32x32);
+    bgSetGfxPtr(1, 0x2000);
+    bgSetMapPtr(0, 0x6000, SC_32x32);
     bgInitTileSet(0, &UFTC_Cave, &PAL_Cave, 0, (&UFTC_Cave_end - &UFTC_Cave), 16 * 2, BG_16COLORS, 0x2000);
-    bgSetMapPtr(0, 0x6800, SC_64x32);
+    bgSetMapPtr(1, 0x6800, SC_32x32);
+
+    bgSetDisable(2);
 
     // Now Put in 16 color mode and disable Bgs except current
     setMode(BG_MODE1, 0);
 
     // Draw a wonderful text :P
     // Put some text
-    consoleDrawText(6, 16, "MARIOx00  WORLD TIME");
-    consoleDrawText(6, 17, " 00000 ox00 1-1  000");
+    //consoleDrawText(6, 16, "MARIOx00  WORLD TIME");
+    //consoleDrawText(6, 17, " 00000 ox00 1-1  000");
 
     // Wait for nothing :P
     setScreenOn();
@@ -292,11 +296,37 @@ int main(void)
 
     // Load all objects into memory
     objLoadObjects((char *)&objmario);
-    while (1)
-    {
+
+    uint16_t frame = 0;
+
+    // Initialize camera
+    u16 x = 0; 
+    u16 y = 0;
+
+    // Force initialization of the graphics on the first frame
+    stage_update_screen(x, y); 
+
+    setScreenOn();
+
+    while(1) {
+        pad0 = padsCurrent(0);
+
+        // Only redraw if inputs actually changed something
+        bool moved = false; 
+
+        if (pad0 & KEY_LEFT)  { x -= 1; moved = true; }
+        if (pad0 & KEY_RIGHT) { x += 1; moved = true; }
+        if (pad0 & KEY_UP)    { y -= 1; moved = true; }
+        if (pad0 & KEY_DOWN)  { y += 1; moved = true; }
+
+        if (moved) {
+            // Only calculate the new row/col
+            // (This function handles the WaitForVBlank + DMA internally)
+            stage_update_screen(x, y);
+        }
         //game_main(0);
         // Update the map regarding the camera
-        mapUpdate();
+        //mapUpdate();
 
         // Update all the available objects
         objUpdateAll();
@@ -305,7 +335,9 @@ int main(void)
         oamInitDynamicSpriteEndFrame();
         spcProcess();
         WaitForVBlank();
-        mapVblank();
+        dmaCopyVram(map_buffer_bg1, 0x6000, map_buffer_bg1);
+        dmaCopyVram(map_buffer_bg2, 0x6000, map_buffer_bg2);
+        //mapVblank();
         oamVramQueueUpdate();
     }
     return 0;
