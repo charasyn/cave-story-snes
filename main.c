@@ -11,6 +11,8 @@
 
 #include "./res/soundbank.h"
 
+#include "bank_data.h"
+
 //---------------------------------------------------------------------------------
 extern char SOUNDBANK__;
 extern char jumpsnd, jumpsndend;
@@ -44,9 +46,6 @@ extern char mariogfx, mariogfx_end;
 extern char mariopal;
 
 extern char snesfont, snespal;
-
-extern char UFTC_Cave, UFTC_Cave_end, PAL_Cave;
-
 //---------------------------------------------------------------------------------
 brrsamples Jump; // The sound for jumping
 
@@ -242,6 +241,8 @@ void marioupdate(u8 idx)
 
 
 #include "stage.h"
+#include "tables.h"
+
 //---------------------------------------------------------------------------------
 int main(void)
 {
@@ -264,7 +265,7 @@ int main(void)
     // Init background
     bgSetGfxPtr(1, 0x2000);
     bgSetMapPtr(0, 0x6000, SC_32x32);
-    bgInitTileSet(0, &UFTC_Cave, &PAL_Cave, 0, (&UFTC_Cave_end - &UFTC_Cave), 16 * 2, BG_16COLORS, 0x2000);
+    //bgInitTileSet(0, &UFTC_Cave, tileset_info[3].palette, 0, (tileset_info[stageTileset].size*32), 16 * 2, BG_16COLORS, 0x2000);
     bgSetMapPtr(1, 0x6800, SC_32x32);
 
     bgSetDisable(2);
@@ -284,7 +285,7 @@ int main(void)
 
     consoleMesenBreakpoint();
 
-    stage_load(0);
+    stage_load(13);
     // Init sprite engine (0x0000 for large, 0x1000 for small)
     oamInitDynamicSprite(0x0000, 0x1000, 0, 0, OBJ_SIZE8_L16);
 
@@ -308,6 +309,8 @@ int main(void)
 
     setScreenOn();
 
+    u8 stage_no = 13;
+
     while(1) {
         pad0 = padsCurrent(0);
 
@@ -324,6 +327,10 @@ int main(void)
             // (This function handles the WaitForVBlank + DMA internally)
             stage_update_screen(x, y);
         }
+
+        if(pad0 & KEY_L) {stage_no--; stage_load(stage_no); stage_draw_screen(x, y);}
+        if(pad0 & KEY_R) {stage_no++; stage_load(stage_no); stage_draw_screen(x, y);}
+
         //game_main(0);
         // Update the map regarding the camera
         //mapUpdate();

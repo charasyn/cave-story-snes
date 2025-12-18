@@ -26,7 +26,7 @@ musics: $(SOUNDBANK).obj
 all: musics mariojump.brr bitmaps $(ROMNAME).sfc
 
 clean: cleanBuildRes cleanRom cleanGfx cleanAudio
-	@rm -f *.clm mariojump.brr
+	@rm -f *.clm mariojump.brr $(STAGE_PICS) $(STAGE_PICS_EGGS)
 
 #---------------------------------------------------------------------------------
 pvsneslibfont.pic: pvsneslibfont.bmp
@@ -45,10 +45,6 @@ tiles.pic: tiles.png
 	@echo convert map tileset... $(notdir $@)
 	$(GFXCONV) -s 8 -o 16 -u 16 -p -m -i $<
 
-PrtCave_vert.pic: PrtCave_vert.png
-	@echo convert map tileset... $(notdir $@)
-	$(GFXCONV) -s 8 -o 16 -u 16 -p -m -R -i  $<
-
 map_1_1.m16: map_1_1.tmj tiles.pic
 	@echo convert map tiled ... $(notdir $@)
 	$(TMXCONV) $< tiles.map
@@ -57,4 +53,22 @@ mariofont.pic: mariofont.bmp
 	@echo convert font with no tile reduction ... $(notdir $@)
 	$(GFXCONV) -s 8 -o 2 -u 16 -e 1 -p -t bmp -m -R -i $<
 
-bitmaps : pvsneslibfont.pic dancer.pic PrtCave_vert.pic tiles.pic mariofont.pic map_1_1.m16 mario_sprite.pic
+
+# 4. Your catch-all rule (now much simpler)
+%.pic: %.png
+	@echo converting stage gfx $< ...
+	$(GFXCONV) -s 8 -o 16 -u 16 -p -m -R -i $<
+
+# 1. Find ALL png files in res/Stage and its subfolders
+# This uses the Linux/Unix 'find' command to look recursively
+ALL_STAGE_PNGS := $(shell find res/ -name "*.png")
+
+# 2. Extract just the filenames and change extension to .pic
+# This removes the directory path so make looks for "PrtEggs2_vert.pic" in the root
+STAGE_PICS := $(patsubst %.png,%.pic,$(notdir $(ALL_STAGE_PNGS)))
+
+# 3. Tell 'make' where to look for source files if they aren't in the root
+# We find every subdirectory inside res/Stage/ and add it to the search path
+VPATH := $(shell find res/ -type d | tr '\n' ':')
+
+bitmaps : pvsneslibfont.pic dancer.pic PrtCave_vert.pic tiles.pic mariofont.pic map_1_1.m16 mario_sprite.pic $(STAGE_PICS)

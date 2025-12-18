@@ -1,6 +1,14 @@
-.include "hdr.asm"
+.include "data_config.asm"
 
-.section ".rodata1" superfree
+.ROMBANKSIZE $10000             ; Every ROM bank is 32 KBytes in size
+.ROMBANKS 24                     ; 2 Mbits - Tell WLA we want to use 4 ROM Banks
+
+
+; --- Part 0 ---
+.section ".rodata_p0" superfree
+
+
+
 
 snesfont:
 .incbin "pvsneslibfont.pic"
@@ -31,32 +39,6 @@ mariopal: .incbin "mario_sprite.pal"
 jumpsnd: .incbin "mariojump.brr"
 jumpsndend:
 
-
-PXM_Cave:
-.incbin "Cave.cpxm"
-PXM_Cave_end:
-
-PAL_Cave:
-.incbin "PrtCave_vert.pal"
-PAL_Cave_end:
-
-PXA_Cave:
-.incbin "Cave.pxa"
-PXA_Cave_end:
-
-PXE_Cave:
-.incbin "Cave.pxe"
-PXE_Cave_end:
-
-UFTC_Cave:
-.incbin "PrtCave_vert.pic"
-UFTC_Cave_end:
-
-
-.ends
-
-.section ".rodata2" superfree
-
 mapmario:
 .incbin "BG1.m16"
 
@@ -68,5 +50,11 @@ tilesetatt:
 
 tilesetdef:
 .incbin "map_1_1.t16"
+
+
+; Compressed tileset patterns
+BIN UFTC_Almond "./res/Stage/PrtAlmond_vert.pic"
+BIN UFTC_Barr   "./res/Stage/PrtBarr_vert.pic"
+BIN UFTC_Cave   "./res/Stage/PrtCave_vert.pic"
 
 .ends

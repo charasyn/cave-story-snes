@@ -1,3 +1,29 @@
+
+; --- YOUR MACROS ---
+.macro BIN
+    .export \1
+    .if NARGS == 3
+        .align \3
+    .else  
+    .endif
+\1:
+    .incbin "\2"
+\1_end:
+
+.endm
+
+.macro PCM
+    .export \1
+    .export \1_end
+    .if NARGS == 3
+        .align \3
+    .else 
+    .endif
+\1:
+    .incbin "\2"
+\1_end:
+.endm
+
 ;==HiRom==      ; We'll get to HiRom some other time.
 
 .MEMORYMAP                      ; Begin describing the system architecture.

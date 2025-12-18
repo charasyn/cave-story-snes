@@ -1,4 +1,4 @@
-/*extern const uint16_t UFTC_Almond[];
+extern const uint16_t UFTC_Almond[];
 extern const uint16_t UFTC_Barr[] ;
 extern const uint16_t UFTC_Cave[] ;
 extern const uint16_t UFTC_Cent[] ;

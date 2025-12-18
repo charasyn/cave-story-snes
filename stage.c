@@ -38,7 +38,7 @@ uint8_t stageBackground = 0xFF;
 
 int16_t backScrollTable[32];
 //uint8_t *stageBlocks = NULL;
-uint16_t *stageTable = NULL;
+uint16_t stageTable[240];
 const uint8_t *stagePXA = NULL;
 
 typedef struct {
@@ -144,7 +144,7 @@ void stage_load(uint16_t id) {
 	//entities_clear();
 	if(stageTable) {
 		//free(stageTable);
-		stageTable = NULL;
+		//stageTable = NULL;
 	}
 	vdp_sprites_clear();
 	//water_entity = NULL;
@@ -240,8 +240,8 @@ void stage_load_credits(uint8_t id) {
 	entities_clear();
 	vdp_sprites_clear();
 	if(stageTable) {
-		free(stageTable);
-		stageTable = NULL;
+		//free(stageTable);
+		//stageTable = NULL;
 	}
 
     disable_ints;
@@ -262,6 +262,8 @@ void stage_load_credits(uint8_t id) {
     enable_ints;
 }
 
+#include <snes.h>
+
 void stage_load_tileset() {
     uint32_t *buf = (uint32_t*) 0xFF0100;
     uint16_t numtile = tileset_info[stageTileset].size << 2;
@@ -269,7 +271,12 @@ void stage_load_tileset() {
      //   uint16_t num = min(numtile - i, 128);
 		//GBATODO
         //decompress_uftc(buf, tileset_info[stageTileset].pat, i, num);
-        vdp_tiles_load(tileset_info[stageTileset].pat, TILE_TSINDEX, tileset_info[stageTileset].size*32);
+        //vdp_tiles_load(tileset_info[stageTileset].pat, TILE_TSINDEX, tileset_info[stageTileset].size*32);
+		iprintf("loading tileset %d\n", stageTileset);
+		setScreenOff();
+		bgInitTileSet(0, tileset_info[stageTileset].pat, tileset_info[stageTileset].palette, 0, (tileset_info[stageTileset].size*128), 16 * 2, BG_16COLORS, 0x2000);
+		setScreenOn();
+
     //}
 	// Inject the breakable block sprite into the tileset
 	stagePXA = tileset_info[stageTileset].PXA;
@@ -359,7 +366,7 @@ void stage_load_blocks() {
     stageWidth = stagePXM[4] | (stagePXM[5] << 8);
     stageHeight = stagePXM[6] | (stagePXM[7] << 8);
 	// Multiplication table for stage rows
-	stageTable = malloc(stageHeight << 1);
+	//stageTable = malloc(stageHeight << 1);
 	iprintf(stageTable);
 	//if(!stageTable) error_oom();
 	uint16_t blockTotal = 0;
@@ -595,7 +602,7 @@ uint16_t last_y = 0xFFFF;
 
 // Your existing shadow buffers
 
-extern u8 PXA_Cave[];
+
 void stage_draw_tile(uint16_t x, uint16_t y, const uint8_t* pxa) {
     // 1. Get Block Info (Same logic as GBA)
     uint16_t b = stage_get_block(x >> 1, y >> 1);
@@ -713,9 +720,20 @@ void stage_update_screen(u16 view_x, u16 view_y) {
     bgSetScroll(0, view_x * 8, view_y * 8);
     bgSetScroll(1, view_x * 8, view_y * 8);
 }
+void stage_clear_map_buffers() {
+    // Define what an "empty" tile looks like for your tileset
+    // Usually TILE_TSINDEX is the first tile (often blank/transparent)
+    uint16_t empty_entry = SNES_TILE_ENTRY(TILE_TSINDEX, 0, 0, 0, 0);
 
+    uint16_t i;
+    for (i = 0; i < 1024; i++) {
+        map_buffer_bg1[i] = empty_entry;
+        map_buffer_bg2[i] = empty_entry;
+    }
+}
 
 void stage_draw_screen(u16 x, u16 y) {
+	stage_clear_map_buffers();
     const uint8_t *pxa = tileset_info[stageTileset].PXA;
 
     // -- Draw Logic (mostly unchanged, just calls the new stage_draw_tile) --
