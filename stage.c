@@ -1,10 +1,10 @@
 #include "common.h"
 
 //#include "bank_data.h"
-//#include "camera.h"
+#include "camera.h"
 //#include "dma.h"
 //#include "effect.h"
-//#include "entity.h"
+#include "entity.h"
 //#include "error.h"
 //#include "hud.h"
 //#include "joy.h"
@@ -207,7 +207,7 @@ void stage_load(uint16_t id) {
     //disable_ints;
     //z80_request();
 	//test_draw_sequential(); // Draw 64x32 foreground PXM area at camera's position
-	//stage_draw_screen();
+	stage_draw_screen();
     //z80_release();
     //enable_ints;
 
@@ -441,13 +441,13 @@ void stage_replace_block(int16_t bx, int16_t by, uint8_t index) {
 	// Only redraw if change was made onscreen
 	stage_draw_block(bx, by);*/
 }
-
+u8 pal_mode = 0;
 // Stage vblank drawing routine
 void stage_update() {
     //z80_request();
 	// Background Scrolling
 	// Type 2 is not included here, that's blank backgrounds which are not scrolled
-	/*
+	
 	if(stageBackgroundType == 0) {
 		vdp_hscroll(VDP_PLAN_A, -sub_to_pixel(camera.x) + SCREEN_HALF_W);
 		vdp_vscroll(VDP_PLAN_A, sub_to_pixel(camera.y) - SCREEN_HALF_H);
@@ -483,7 +483,7 @@ void stage_update() {
 			vdp_hscroll_tile(VDP_PLAN_B, backScrollTable);
 			//VDP_setVerticalScroll(VDP_PLAN_B, 0);
 		}
-	} else if(stageBackgroundType == 3) {
+	} /*else if(stageBackgroundType == 3) {
 		// Lock camera at specific spot
 		camera.target = NULL;
 		// Ironhead boss background auto scrolls leftward
@@ -506,7 +506,7 @@ void stage_update() {
 				uint16_t mapBuffer[64];
 
 				for( x = 0; x < 64; x++) mapBuffer[x] = 0;
-				DMA_doDma(DMA_VRAM, (uint32_t)mapBuffer, VDP_PLAN_B + (rowup << 7), 64, 2);
+				//DMA_doDma(DMA_VRAM, (uint32_t)mapBuffer, VDP_PLAN_B + (rowup << 7), 64, 2);
 			} else { // On screen or above
 				uint16_t mapBuffer[64];
 
@@ -514,7 +514,7 @@ void stage_update() {
 					mapBuffer[x] = TILE_ATTR(PAL0,1,0,0,
 							TILE_WATERINDEX + (oldrow == rowc ? x&3 : 4 + (random()&15)));
 				}
-				DMA_doDma(DMA_VRAM, (uint32_t)mapBuffer, VDP_PLAN_B + (rowup << 7), 64, 2);
+				//DMA_doDma(DMA_VRAM, (uint32_t)mapBuffer, VDP_PLAN_B + (rowup << 7), 64, 2);
 			}
 		}
 		while(row > oldrow) { // Water is lowering (Y increasing)
@@ -526,11 +526,11 @@ void stage_update() {
 					mapBuffer[x] = TILE_ATTR(PAL0,1,0,0,
 							TILE_WATERINDEX + (oldrow == 0 ? x&3 : 4 + (random()&15)));
 				}
-				DMA_doDma(DMA_VRAM, (uint32_t)mapBuffer, VDP_PLAN_B + (rowup << 7), 64, 2);
+				//DMA_doDma(DMA_VRAM, (uint32_t)mapBuffer, VDP_PLAN_B + (rowup << 7), 64, 2);
 			} else { // On screen or below
 				uint16_t mapBuffer[64];
 				for( x = 0; x < 64; x++) mapBuffer[x] = 0;
-				DMA_doDma(DMA_VRAM, (uint32_t)mapBuffer, VDP_PLAN_B + (rowup << 7), 64, 2);
+				//DMA_doDma(DMA_VRAM, (uint32_t)mapBuffer, VDP_PLAN_B + (rowup << 7), 64, 2);
 			}
 		}
 		
@@ -553,31 +553,31 @@ void stage_update() {
 			uint16_t to_index = TILE_TSINDEX + (currents[t].index << 2);
 			switch(currents[t].dir) {
 				case 0: // Left
-					from_ts = (uint8_t*) TS_WindH.tiles;
+					//from_ts = (uint8_t*) TS_WindH.tiles;
 					from_index = (currentsTimer >> 1) & ~1;
 				break;
 				case 1: // Up
-					from_ts = (uint8_t*) TS_WindV.tiles;
+					//from_ts = (uint8_t*) TS_WindV.tiles;
 					from_index = (currentsTimer >> 1) & ~1;
 				break;
 				case 2: // Right
-					from_ts = (uint8_t*) TS_WindH.tiles;
+					//from_ts = (uint8_t*) TS_WindH.tiles;
 					from_index = 14 - ((currentsTimer >> 1) & ~1);
 				break;
 				case 3: // Down
-					from_ts = (uint8_t*) TS_WindV.tiles;
+					//from_ts = (uint8_t*) TS_WindV.tiles;
 					from_index = 14 - ((currentsTimer >> 1) & ~1);
 				break;
 				default: return;
 			}
 			// Replace the tile in the tileset
-			DMA_doDma(DMA_VRAM, (uint32_t) (from_ts + (from_index << 5)), to_index << 5, 32, 2);
+			//DMA_doDma(DMA_VRAM, (uint32_t) (from_ts + (from_index << 5)), to_index << 5, 32, 2);
 			from_index += 16;
 			to_index += 2;
-			DMA_doDma(DMA_VRAM, (uint32_t) (from_ts + (from_index << 5)), to_index << 5, 32, 2);
+			//DMA_doDma(DMA_VRAM, (uint32_t) (from_ts + (from_index << 5)), to_index << 5, 32, 2);
 		}
-	}
-    //z80_release();*/
+	}*/
+    //z80_release();
 }
 
 void stage_setup_palettes() {
@@ -735,37 +735,29 @@ void stage_clear_map_buffers() {
     }
 }
 
-void stage_draw_screen(u16 x, u16 y) {
-	stage_clear_map_buffers();
+void stage_draw_screen() {
     const uint8_t *pxa = tileset_info[stageTileset].PXA;
-
-    // -- Draw Logic (mostly unchanged, just calls the new stage_draw_tile) --
-    uint16_t start_y = x - 16;
-    uint16_t start_x = y - 16;
-
-    // Loop through visible area
-	uint16_t i, j;
-    for ( i = 0; i < 32; i++) {
-        uint16_t y = start_y + i;
-        
-        // Safety check for Y bounds (optional based on your game logic)
-        if (y < (stageHeight + 32) * 2) {
-            
-            for ( j = 0; j < 32; j++) {
-                uint16_t x = start_x + j;
-                stage_draw_tile(x, y, pxa);
-            }
-        }
-    }
-
-    // -- VRAM Update --
-    // This MUST be done during VBlank (use WaitForVBlank() or put in vblank handler)
-    // Assuming BG1 is at address 0x0000 and BG2 is at 0x1000 in VRAM (set via bgSetMapPtr)
-    
-    // Copy the shadow buffers to actual VRAM
-    // 0x6000 and 0x7000 are EXAMPLE VRAM addresses. Use whatever you set in bgSetMapPtr.
-    //dmaCopyVram(map_buffer_bg1, 0x6000, sizeof(map_buffer_bg1));
-	//dmaCopyVram(map_buffer_bg2, 0x6800, sizeof(map_buffer_bg2));
+	//uint16_t maprow[64];
+	uint16_t y = sub_to_tile(camera.y) - 16;
+	uint16_t i;
+	for( i = 32; i--; ) {
+		//if(vblank) aftervsync(); // So we don't lag the music
+		//vblank = 0;
+		
+		if(y < (stageHeight + 32) << 1) {
+			uint16_t x = sub_to_tile(camera.x) - 16;
+			uint16_t j;
+			for( j = 32; j--; ) {
+				//if(x >= stageWidth << 1) break;
+				//if(x >= 0) {
+					stage_draw_tile(x, y, pxa);
+				//}
+				x++;
+			}
+            //dma_now(DmaVRAM, (uint32_t)maprow, VDP_PLANE_A + ((y & 31) << 7), 64, 2);
+		}
+		y++;
+	}
 }
 void stage_draw_screen_credits() {
 	uint16_t maprow[20];

@@ -330,8 +330,8 @@ int main(void)
         //    stage_update_screen(x, y);
         }
 
-        //if(pad0 & KEY_L) {stage_no--; stage_load(stage_no); stage_draw_screen(x, y);}
-        //if(pad0 & KEY_R) {stage_no++; stage_load(stage_no); stage_draw_screen(x, y);}
+        if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
+        if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
 
         game_main(0);
         // Update the map regarding the camera

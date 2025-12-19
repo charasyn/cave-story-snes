@@ -19,11 +19,11 @@
 
 typedef signed char		int8_t;
 typedef signed short	int16_t;
-typedef signed long		int32_t;
+typedef signed long long		int32_t;
 
 typedef unsigned char	uint8_t;
 typedef unsigned short	uint16_t;
-typedef unsigned long	uint32_t;
+typedef unsigned long long	uint32_t;
 
 // SGDK Compatibility
 
@@ -136,7 +136,7 @@ extern const int16_t cos2[0x100];
 // pixel - single dot on screen (1x1)
 // tile - genesis VDP tile (8x8)
 // block - Cave Story tile (16x16)
-#define sub_to_pixel(x)   ((x)>>9)
+#define sub_to_pixel(x)   (((int32_t)(x))>>9)
 #define sub_to_tile(x)    ((x)>>12)
 #define sub_to_block(x)   ((x)>>13)
 

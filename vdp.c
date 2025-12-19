@@ -60,10 +60,36 @@ uint16_t vdp_fade_step() {
 void vdp_fade(const uint16_t *src, const uint16_t *dst, uint16_t speed, uint8_t async) {}
 
 // --- Scroll ---
+uint16_t prev_h = 0;
+uint16_t prev_v = 0;
 
-void vdp_hscroll(uint16_t plan, int16_t hscroll) {}
-void vdp_hscroll_tile(uint16_t plan, int16_t *hscroll) {}
-void vdp_vscroll(uint16_t plan, int16_t vscroll) {}
+void vdp_hscroll(uint16_t plan, int16_t hscroll) {
+	bgSetScroll(plan, -hscroll, prev_v);
+	if(plan == VDP_PLAN_A)
+	{
+		//tileScrollX = -hscroll;
+		//scroll stage back too
+		bgSetScroll(2, -hscroll, prev_v);
+	}
+    prev_h = -hscroll;
+}
+
+void vdp_hscroll_tile(uint16_t plan, int16_t *hscroll) {
+	bgSetScroll(plan, hscroll, prev_v);
+    prev_h = hscroll;
+}
+
+void vdp_vscroll(uint16_t plan, int16_t vscroll) {
+	bgSetScroll(plan, prev_h, vscroll);
+	if(plan == VDP_PLAN_A)
+	{
+		//tileScrollX = vscroll;
+		//scroll stage back too
+		bgSetScroll(2, prev_h, vscroll);
+	}
+    prev_v = vscroll;
+}
+
 
 // --- Sprites ---
 

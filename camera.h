@@ -3,16 +3,15 @@ extern int32_t camera_xmin, camera_ymin;
 extern uint32_t camera_xsize, camera_ysize;
 
 typedef struct {
-	int32_t x, y; // Fixed point units
-	Entity *target; // Player, boss, NPC, or NULL
-	// Offset is the point relative to the target's position
-	// that the camera tries to center on
-	int16_t x_offset, y_offset;
-	// Apply some math ahead of time to speed up sprite positioning
-	uint16_t x_shifted, y_shifted;
-	// Marks a position which, after moving 16 pixels away will remark
-	// to the new position, and reactivate any entities that came on screen
-	int32_t x_mark, y_mark;
+    long long x;          // 4 bytes
+    long long y;          // 4 bytes
+    long long x_mark;     // 4 bytes
+    long long y_mark;     // 4 bytes
+    long long x_offset;   // 4 bytes
+    long long y_offset;   // 4 bytes
+    int16_t x_shifted;  // 2 bytes
+    int16_t y_shifted;  // 2 bytes
+    Entity *target;     // 2 bytes (SNES pointers are 16-bit in near memory)
 } cameraStruct;
 
 extern cameraStruct camera;

@@ -43,7 +43,7 @@ uint8_t FPS = 0;
 void game_reset(uint8_t load) {
 	camera_init();
 
-	stage_load(12);
+	stage_load(14);
 
 	player.x = (64 << CSF);
 	player.y = (64 << CSF);
@@ -74,6 +74,9 @@ void game_reset(uint8_t load) {
 u8 tscState = 0;
 u8 pal_mode = 0;
 u8 joytype = 0;
+   		u8 stage_no = 14;
+
+#include <snes.h>
 void game_main(uint8_t load) {
 
 	
@@ -162,6 +165,9 @@ void game_main(uint8_t load) {
 				if(!gameFrozen) {
 					//if(showingBossHealth) tsc_update_boss_health();
 					camera_update();
+					//iprintf("\x1b[1;1HX:%08llX Y:%08llX\nSX:%04d SY:%04d", 
+        			//	(unsigned long long)camera.x, (unsigned long long)camera.y, 
+        			//	(int)camera.x_shifted, (int)camera.y_shifted);
 				}
 				// Run the next set of commands in a script if it is running
                 PF_BGCOLOR(0x0E0);
@@ -220,10 +226,15 @@ void game_main(uint8_t load) {
 		PF_BGCOLOR(0x000);
 		spcProcess();
 		vdp_vsync();
-		dmaCopyVram(map_buffer_bg1, 0x6000, map_buffer_bg1);
-        dmaCopyVram(map_buffer_bg2, 0x6000, map_buffer_bg2);
+		dmaCopyVram(map_buffer_bg1, 0x6000, 2048*4);
+        dmaCopyVram(map_buffer_bg2, 0x6000, 2048*4);
+		stage_update();
 		joy_update();
 		PF_BGCOLOR(0x00E);
+
+        u8 pad0 = padsCurrent(0);
+		if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
+        if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
 		//aftervsync();
 	}
 }

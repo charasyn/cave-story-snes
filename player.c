@@ -628,6 +628,8 @@ static void player_update_movement() {
 	player_update_jump();
 	player.x_next = player.x + player.x_speed;
 	player.y_next = player.y + player.y_speed;
+	//iprintf("X:%lld Y:%lld SpdX:%d SpdY:%d\n", player.x, player.y, player.x_speed, player.y_speed);
+
 }
 
 static void player_update_walk() {
