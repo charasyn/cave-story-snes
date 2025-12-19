@@ -39,7 +39,16 @@ uint8_t FPS = 0;
 
 // Initializes or re-initializes the game after "try again"
 //void game_reset(uint8_t load);
+// Tracks how many times your game loop has finished
+u16 frames_drawn = 0; 
 
+// The calculated FPS to display
+u16 current_fps = 0; 
+
+// Tracks the last time (in VBlanks) we updated the FPS
+u32 next_fps_check = 0; 
+
+// PVSnesLib global variable that ticks every VBlank
 void game_reset(uint8_t load) {
 
 	stage_load(13);
@@ -231,6 +240,27 @@ void game_main(uint8_t load) {
 		PF_BGCOLOR(0x000);
 		spcProcess();
 		vdp_vsync();
+
+
+    	// 3. Increment our counter because we successfully finished one frame
+    	frames_drawn++;
+
+    	// 4. Check if 60 VBlanks (approx 1 second for NTSC) have passed
+    	// Use 50 instead of 60 if you are compiling for PAL
+    	if (snes_vblank_count >= next_fps_check) {
+    	    // Save the result
+    	    current_fps = frames_drawn;
+	
+    	    // Reset the counter
+    	    frames_drawn = 0;
+	
+    	    // Set the next check time to 1 second (60 ticks) in the future
+    	    next_fps_check = snes_vblank_count + 60;
+	
+    	    // Optional: Update text on screen (requires consoleInitText to be set up)
+    	    iprintf("FPS: %d \n", current_fps);
+    	}
+
 		oamUpdate(); 
 		dmaCopyVram(map_buffer_bg2, 0x6000, 2048);
         dmaCopyVram(map_buffer_bg1, 0x6800, 2048);
@@ -242,5 +272,6 @@ void game_main(uint8_t load) {
 		if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
         if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
 		//aftervsync();
+		
 	}
 }
