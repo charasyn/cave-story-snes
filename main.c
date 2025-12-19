@@ -173,70 +173,7 @@ void player_update_jump()
 // Update function for mario object
 void marioupdate(u8 idx)
 {
-    // Get pad value
-    pad0 = padsCurrent(0);
 
-    // Update physics based on player.txt logic
-    player_update_walk();
-    player_update_jump();
-
-    // 1st, check collision with map. This will update marioobj->tilestand.
-    objCollidMap(idx);
-
-    // Update animation and sprite direction
-    if (marioobj->tilestand != 0) // On the ground
-    {
-        if (*marioxv == 0) // Standing still
-        {
-            oambuffer[0].oamframeid = MARIOSTAND;
-            oambuffer[0].oamrefresh = 1;
-        }
-        else // Walking
-        {
-            // Set sprite direction
-            if (*marioxv > 0)
-                oambuffer[0].oamattribute |= 0x40; // flip sprite to the right
-            else
-                oambuffer[0].oamattribute &= ~0x40; // do not flip (left)
-
-            // Update walking animation frame
-            flip++;
-            if ((flip & 3) == 3)
-            {
-                mariofidx++;
-                mariofidx = mariofidx & 1;
-                oambuffer[0].oamframeid = marioflp + mariofidx;
-                oambuffer[0].oamrefresh = 1;
-            }
-        }
-    }
-    else // In the air
-    {
-        oambuffer[0].oamframeid = MARIOJUMPING;
-        oambuffer[0].oamrefresh = 1;
-    }
-
-    // Update position based on velocity
-    objUpdateXY(idx);
-
-    // check boundaries
-    if (*marioox <= 0)
-        *marioox = 0;
-    if (*mariooy <= 0)
-        *mariooy = 0;
-
-    // change sprite coordinates regarding map location
-    mariox = (*marioox);
-    marioy = (*mariooy);
-    oambuffer[0].oamx = mariox - x_pos;
-    oambuffer[0].oamy = marioy - y_pos;
-    oamDynamic16Draw(0);
-
-    // update camera regarding mario object
-    mapUpdateCamera(mariox, marioy);
-
-    // Store current pad state for next frame
-    old_pad0 = pad0;
 }
 
 
@@ -312,6 +249,9 @@ int main(void)
     u8 stage_no = 13;
 
     joy_init();
+
+
+    dmaCopyVram(mariogfx, 0x0000, 32*8);
 
     while(1) {
         pad0 = padsCurrent(0);

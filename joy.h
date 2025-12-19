@@ -16,12 +16,12 @@
 #define BUTTON_LEFT     (1<<5)
 #define BUTTON_RIGHT    (1<<4)
 #define BUTTON_A        0x0040
-#define BUTTON_B        (1<<1) //GBA B
-#define BUTTON_C        (1<<0) //GBA A
-#define BUTTON_START    (1<<3) //GBA Start
-#define BUTTON_X        (1<<2) //GBA Select
-#define BUTTON_Y        (1<<9) //GBA L
-#define BUTTON_Z        (1<<8) //GBA R
+#define BUTTON_B        (1<<15) //GBA B
+#define BUTTON_C        (1<<7) //GBA A
+#define BUTTON_START    (1<<12) //GBA Start
+#define BUTTON_X        (1<<13) //GBA Select
+#define BUTTON_Y        (1<<5) //GBA L
+#define BUTTON_Z        (1<<4) //GBA R
 #define BUTTON_MODE     0x0800
 
 #define BUTTON_DIR      0x000F

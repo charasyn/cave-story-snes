@@ -283,8 +283,10 @@ void stage_load_tileset() {
     //}
 	// Inject the breakable block sprite into the tileset
 	stagePXA = tileset_info[stageTileset].PXA;
+	//iprintf("stage pxa: %04X\n", stagePXA);
 		uint16_t i;
 	for( i = 0; i < numtile >> 2; i++) {
+	//	iprintf("i%d %04X ", i, stagePXA[i]);
 	//	if(stagePXA[i] == 0x43) vdp_tiles_load_from_rom(TS_Break.tiles, TILE_TSINDEX + (i << 2), 4);
 	}
 	// Search for any "wind" tiles and note their index to animate later
@@ -378,6 +380,10 @@ void stage_load_blocks() {
 		stageTable[y] = blockTotal;
 		blockTotal += stageWidth;
 	}
+	    
+	iprintf("Map Size: %d x %d\n", stageWidth, stageHeight);
+
+  
 }
 
 void stage_load_entities() {
@@ -610,12 +616,12 @@ void stage_draw_tile(uint16_t x, uint16_t y, const uint8_t* pxa) {
     // 1. Get Block Info (Same logic as GBA)
     uint16_t b = stage_get_block(x >> 1, y >> 1);
     uint16_t t = b << 2; // Base tile index for 16x16 meta-tile
-    uint16_t ta = PXA_Cave[b];
+    uint16_t ta = pxa[b];
 
     // 2. Determine Attributes
     // Adjust these masks based on your specific 'pxa' format data
     uint16_t palette = (ta & 0x80) ? 0 : 0; // Example: Bit 7 determines palette 0 or 1
-    uint16_t priority = (ta & 0x40) ? 1 : 0; // Example: Bit 6 is priority
+    uint16_t priority = (ta & 0x40) ? 1 : 1; // Example: Bit 6 is priority
     
     // Calculate final tile index (0-3) for the specific 8x8 part
     uint16_t final_tile = TILE_TSINDEX + t + (x & 1) + ((y & 1) << 1);

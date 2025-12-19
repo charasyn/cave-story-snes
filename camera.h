@@ -1,6 +1,6 @@
 // Pre calculated camera bounds values to speed up entity_on_screen()
-extern int32_t camera_xmin, camera_ymin;
-extern uint32_t camera_xsize, camera_ysize;
+extern long long camera_xmin, camera_ymin;
+extern unsigned long long camera_xsize, camera_ysize;
 
 typedef struct {
     long long x;          // 4 bytes
@@ -20,7 +20,7 @@ extern cameraStruct camera;
 void camera_init();
 // Center camera directly on a specific point
 // This does not redraw the tilemap, call stage_draw_screen() manually after
-void camera_set_position(int32_t x, int32_t y);
+void camera_set_position(long long x, long long y);
 // Shake camera for a specified number of frames
 void camera_shake(uint16_t time);
 // Per frame update for camera, moves toward the target entity and scrolls the tilemap

@@ -41,12 +41,10 @@ uint8_t FPS = 0;
 //void game_reset(uint8_t load);
 
 void game_reset(uint8_t load) {
-	camera_init();
 
-	stage_load(14);
+	stage_load(13);
 
-	player.x = (64 << CSF);
-	player.y = (64 << CSF);
+
 	/*
 	vdp_map_clear(VDP_PLAN_B);
 	camera_init();
@@ -78,8 +76,10 @@ u8 joytype = 0;
 
 #include <snes.h>
 void game_main(uint8_t load) {
+	camera_init();
 
-	
+	player_init();
+
 	gamemode = GM_GAME;
 
 	//vdp_colors(0, PAL_FadeOut, 64);
@@ -102,7 +102,10 @@ void game_main(uint8_t load) {
 		//vdp_fade(PAL_FadeOut, NULL, 4, TRUE);
 	}
 	paused = FALSE;
-
+	player.x = (long long)((10LL*16LL) << CSF);
+	player.y = (long long)((8LL*16LL) << CSF);
+	player.x_next = player.x;
+	player.y_next = player.y;
 	while(TRUE) {
 		PF_BGCOLOR(0x000);
 
@@ -115,7 +118,11 @@ void game_main(uint8_t load) {
 				// This unloads the stage's script and loads the "ArmsItem" script in its place
 				//tsc_load_stage(255);
 				//draw_itemmenu(TRUE);
-				paused = TRUE;
+					player.x = (long long)((10LL*16LL) << CSF);
+					player.y = (long long)((8LL*16LL) << CSF);
+					player.x_next = player.x;
+					player.y_next = player.y;
+				//paused = TRUE;
 			} else if(joy_pressed(btn[cfg_btn_map]) && joytype == JOY_TYPE_PAD6 
 					&& !tscState && (playerEquipment & EQUIP_MAPSYSTEM)) {
 				// Shorthand to open map system
@@ -165,9 +172,7 @@ void game_main(uint8_t load) {
 				if(!gameFrozen) {
 					//if(showingBossHealth) tsc_update_boss_health();
 					camera_update();
-					//iprintf("\x1b[1;1HX:%08llX Y:%08llX\nSX:%04d SY:%04d", 
-        			//	(unsigned long long)camera.x, (unsigned long long)camera.y, 
-        			//	(int)camera.x_shifted, (int)camera.y_shifted);
+					//iprintf("\x1b[1;1HX:%08llX Y:%08llX\nSX:%04d SY:%04d", 	(unsigned long long)camera.x, (unsigned long long)camera.y, (int)camera.x_shifted, (int)camera.y_shifted);
 				}
 				// Run the next set of commands in a script if it is running
                 PF_BGCOLOR(0x0E0);
@@ -226,8 +231,9 @@ void game_main(uint8_t load) {
 		PF_BGCOLOR(0x000);
 		spcProcess();
 		vdp_vsync();
-		dmaCopyVram(map_buffer_bg1, 0x6000, 2048*4);
-        dmaCopyVram(map_buffer_bg2, 0x6000, 2048*4);
+		oamUpdate(); 
+		dmaCopyVram(map_buffer_bg2, 0x6000, 2048);
+        dmaCopyVram(map_buffer_bg1, 0x6800, 2048);
 		stage_update();
 		joy_update();
 		PF_BGCOLOR(0x00E);

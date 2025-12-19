@@ -738,6 +738,7 @@ uint8_t entity_overlapping(Entity *a, Entity *b) {
 
 bounding_box entity_react_to_collision(Entity *a, Entity *b) {
 	bounding_box result = { 0, 0, 0, 0 };
+	/*
 	int16_t ax1 = sub_to_pixel(a->x_next) - (a->dir ? a->hit_box.right : a->hit_box.left),
 		ax2 = sub_to_pixel(a->x_next) + (a->dir ? a->hit_box.left : a->hit_box.right),
 		ay1 = sub_to_pixel(a->y_next) - a->hit_box.top,
@@ -824,7 +825,7 @@ bounding_box entity_react_to_collision(Entity *a, Entity *b) {
 				if(a->x_speed > 0) a->x_speed = 0;
 			}
 		}
-	}
+	}*/
 	return result;
 }
 

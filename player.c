@@ -178,6 +178,23 @@ void player_init() {
 	};*/
 }
 void player_draw() {
+    // 1. Calculate Screen Coordinates
+    // Convert fixed point (CSF) to integers, adjust for camera and screen center
+    int16_t x = (player.x >> CSF) - (camera.x >> CSF) + (256 / 2) - 4;
+    int16_t y = (player.y >> CSF) - (camera.y >> CSF) + (224 / 2) - 4;
+
+    // 2. Set the Sprite
+    // oamSet(id, x, y, priority, hFlip, vFlip, gfxOffset, paletteOffset)
+    // id: 0 (Using the first sprite slot)
+    // x, y: Calculated position
+    // priority: 3 (Highest, appears above layers)
+    // gfxOffset: 0 (The tile we loaded at VRAM 0x0000)
+    // paletteOffset: 0 (The red palette we set up)
+    oamSet(0, x, y, 3, 0, 0, 0, 0);
+
+    // 3. Queue the sprite for drawing
+    //oamDynamic16Draw(0);
+/*
 	// Special case when player drowns
 	if(!airPercent) {
 		sprite_pos(playerSprite,
@@ -298,10 +315,11 @@ void player_draw() {
 					(player.y>>CSF) - (camera.y>>CSF) + SCREEN_HALF_H - 12);
 			vdp_sprite_add(&airTankSprite);
 		}
-	}
+	}*/
 }
 void player_update() {
 	uint8_t tile = stage_get_block_type(sub_to_block(player.x), sub_to_block(player.y));
+	//iprintf("Player Tile: %d\n", tile);
 	if(!playerMoveMode) { // Normal movement
 		// Wind/Water current
 		if(tile & 0x80) {
@@ -628,7 +646,7 @@ static void player_update_movement() {
 	player_update_jump();
 	player.x_next = player.x + player.x_speed;
 	player.y_next = player.y + player.y_speed;
-	//iprintf("X:%lld Y:%lld SpdX:%d SpdY:%d\n", player.x, player.y, player.x_speed, player.y_speed);
+	iprintf("X:%lld Y:%lld SpdX:%d SpdY:%d\n", player.x, player.y, player.x_speed, player.y_speed);
 
 }
 
@@ -725,7 +743,7 @@ static void player_update_jump() {
 			// Maybe possibly fix jump height?
 			player.jump_time = (pal_mode || cfg_60fps) ? 0 : 3;
 			player.jump_time += player.underwater ? 2 : 0;
-			
+			spcPlaySound(0);
 			sound_play(SND_PLAYER_JUMP, 3);
 		}
 	} else if((playerEquipment & (EQUIP_BOOSTER08 | EQUIP_BOOSTER20)) &&
