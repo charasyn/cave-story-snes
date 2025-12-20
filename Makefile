@@ -1,4 +1,4 @@
-#.PRECIOUS: %.asm
+.PRECIOUS: %.asm
 
 ifeq ($(strip $(PVSNESLIB_HOME)),)
 $(error "Please create an environment variable PVSNESLIB_HOME by following this guide: https://github.com/alekmaul/pvsneslib/wiki/Installation")
@@ -25,10 +25,30 @@ export ROMNAME := cave-story-snes
 SMCONVFLAGS	:= -s -o $(SOUNDBANK) -i -V -b 3
 musics: $(SOUNDBANK).obj
 
-all: musics mariojump.brr bitmaps $(ROMNAME).sfc
+all: musics mariojump.brr mariowalk.brr bitmaps $(ROMNAME).sfc
+
+# 1. Find ALL png files in res/Stage and its subfolders
+# This uses the Linux/Unix 'find' command to look recursively
+ALL_STAGE_PNGS := $(shell find res/ -name "*.png")
+
+# 2. Extract just the filenames and change extension to .pic
+# This removes the directory path so make looks for "PrtEggs2_vert.pic" in the root
+STAGE_PICS := $(patsubst %.png,%.pic,$(notdir $(ALL_STAGE_PNGS)))
+
+# 3. Tell 'make' where to look for source files if they aren't in the root
+# We find every subdirectory inside res/Stage/ and add it to the search path
+VPATH := $(shell find res/ -type d | tr '\n' ':')
+
+# ---------------------------------------------------------------------------------
+# CLEAN RULES
+# ---------------------------------------------------------------------------------
+
+# Identify ASM files that were generated from C files (so we don't delete manual ASM sources)
+GENERATED_ASM := $(patsubst %.c, %.asm, $(wildcard *.c))
 
 clean: cleanBuildRes cleanRom cleanGfx cleanAudio
-	@rm -f *.clm mariojump.brr $(STAGE_PICS) $(STAGE_PICS_EGGS)
+	@echo Cleaning generated data and generated ASM files...
+	@rm -f *.clm mariojump.brr mariowalk.brr $(STAGE_PICS) $(STAGE_PICS_EGGS) $(GENERATED_ASM)
 
 #---------------------------------------------------------------------------------
 pvsneslibfont.pic: pvsneslibfont.bmp
@@ -60,17 +80,5 @@ mariofont.pic: mariofont.bmp
 %.pic: %.png
 	@echo converting stage gfx $< ...
 	$(GFXCONV) -s 8 -o 16 -u 16 -p -m -R -i $<
-
-# 1. Find ALL png files in res/Stage and its subfolders
-# This uses the Linux/Unix 'find' command to look recursively
-ALL_STAGE_PNGS := $(shell find res/ -name "*.png")
-
-# 2. Extract just the filenames and change extension to .pic
-# This removes the directory path so make looks for "PrtEggs2_vert.pic" in the root
-STAGE_PICS := $(patsubst %.png,%.pic,$(notdir $(ALL_STAGE_PNGS)))
-
-# 3. Tell 'make' where to look for source files if they aren't in the root
-# We find every subdirectory inside res/Stage/ and add it to the search path
-VPATH := $(shell find res/ -type d | tr '\n' ':')
 
 bitmaps : pvsneslibfont.pic dancer.pic PrtCave_vert.pic tiles.pic mariofont.pic map_1_1.m16 mario_sprite.pic $(STAGE_PICS)

@@ -39,6 +39,9 @@ mariopal: .incbin "mario_sprite.pal"
 jumpsnd: .incbin "mariojump.brr"
 jumpsndend:
 
+walksnd: .incbin "mariowalk.brr"
+walksndend:
+
 mapmario:
 .incbin "BG1.m16"
 

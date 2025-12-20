@@ -194,7 +194,7 @@ void player_draw() {
 
     // 3. Queue the sprite for drawing
     //oamDynamic16Draw(0);
-/*
+
 	// Special case when player drowns
 	if(!airPercent) {
 		sprite_pos(playerSprite,
@@ -252,7 +252,7 @@ void player_draw() {
 				player.frame = (player.y_speed > 0) ? WALK2 : WALK1;
 			}
 		}
-		if((player.animtime & 1) && player.timer2 == 1) sound_play(SND_PLAYER_WALK, 2);
+		if((player.animtime & 1) && player.timer2 == 1) { sound_play(SND_PLAYER_WALK, 2); }
 	}
 	// Set frame if it changed
 	if(player.frame != player.oframe) PLAYER_SPRITE_TILES_QUEUE();
@@ -268,6 +268,7 @@ void player_draw() {
 				player.dir = 0;
 			}
 		}
+		/*
 		sprite_hflip(playerSprite, player.dir);
 		sprite_pos(playerSprite,
 				sub_to_pixel(player.x) - sub_to_pixel(camera.x) + SCREEN_HALF_W - 8,
@@ -314,8 +315,8 @@ void player_draw() {
 					(player.x>>CSF) - (camera.x>>CSF) + SCREEN_HALF_W - 12,
 					(player.y>>CSF) - (camera.y>>CSF) + SCREEN_HALF_H - 12);
 			vdp_sprite_add(&airTankSprite);
-		}
-	}*/
+		}*/
+	}
 }
 void player_update() {
 	uint8_t tile = stage_get_block_type(sub_to_block(player.x), sub_to_block(player.y));

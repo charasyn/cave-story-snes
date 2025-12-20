@@ -16,7 +16,7 @@
 //---------------------------------------------------------------------------------
 extern char SOUNDBANK__;
 extern char jumpsnd, jumpsndend;
-
+extern char walksnd, walksndend;
 //---------------------------------------------------------------------------------
 // Physics constants adapted from player.txt
 #define PLAYER_MAX_SPEED 675 / 2   // Max horizontal speed
@@ -48,6 +48,7 @@ extern char mariopal;
 extern char snesfont, snespal;
 //---------------------------------------------------------------------------------
 brrsamples Jump; // The sound for jumping
+brrsamples Walk; // The sound for jumping
 
 u16 pad0, old_pad0; // pad variables
 
@@ -197,7 +198,10 @@ int main(void)
     // Load music
     spcLoad(MOD_VIVI);
     // Load sample
+    spcSetSoundEntry(15, 8, 6, &walksndend - &walksnd, &walksnd, &walksnd);
     spcSetSoundEntry(15, 8, 6, &jumpsndend - &jumpsnd, &jumpsnd, &Jump);
+
+
 
     // Init background
     bgSetGfxPtr(1, 0x2000);

@@ -241,7 +241,7 @@ void camera_update() {
 	camera_update_culling();
 	
 	// Morph the stage if the camera is moving
-	//camera_handle_morphing(&x_next, &y_next);
+	camera_handle_morphing(&x_next, &y_next);
 	
 	// Apply camera position
 	camera.x = x_next;
