@@ -95,42 +95,125 @@ uint16_t map_buffer_bg2[MAP_WIDTH * MAP_HEIGHT];
     ((tile & 0x3FF) | ((palette & 7) << 10) | ((prio & 1) << 13) | ((hflip & 1) << 14) | ((vflip & 1) << 15))
 #include <snes.h>
 void test_draw_sequential() {
-    uint16_t tile_counter = 0;
 
-    // Iterate through every tile position on the 32x32 screen
-	uint16_t y;
-    for ( y = 0; y < 32; y++) {
-		uint16_t x;
-        for ( x = 0; x < 32; x++) {
+    // 1. Pre-calculate constant attributes to avoid shifting in the loop
+    // Palette 0, High Priority (1 << 13) = 0x2000
+    // We pre-calculate this once.
+    const uint16_t tile_attributes = (1 << 10) | (1 << 13);
+    
+    // 2. Cache dimensions in local variables (faster access)
+    uint16_t asset_w = background_info[stageBackground].width;
+    uint16_t asset_h = background_info[stageBackground].height;
+    
+    // 3. Use a pointer for the destination (sequential writes are faster)
+    uint16_t *dest = map_buffer_bg2;
+
+    // 4. Track asset Y position manually to avoid modulo
+    uint16_t local_y = 0;
+    uint16_t row_start_index = 0; // This will track (local_y * asset_w)
+	uint16_t screen_y;
+    for ( screen_y = 0; screen_y < 32; screen_y++) {
+        
+        // Track asset X position manually to avoid modulo
+        uint16_t local_x = 0;
+        uint16_t screen_x;
+        for ( screen_x = 0; screen_x < 32; screen_x++) {
             
-            // 2. Calculate the linear index
-            // For a 32x32 map on SNES, this is perfectly linear.
-            uint16_t map_offset = (y * 32) + x;
+            // 5. Calculate Tile Index using addition instead of multiplication
+            uint16_t tile_index = row_start_index + local_x;
 
-            // 3. Create the tile entry
-            // Format: vhopppcc cccccccc (Flip, Priority, Palette, TileIndex)
-            // We use tile_counter & 0x3FF to keep the index within 0-1023 range.
-            uint16_t tile_index = tile_counter & 0x3FF;
-            uint16_t palette = 0; // Use Palette 0
-            uint16_t priority = 1; // High priority (appears above sprites with low prio)
+            // 6. Write to buffer using pointer increment (auto-increments dest)
+            *dest++ = (tile_index & 0x3FF) | tile_attributes;
 
-            // Construct the entry
-            uint16_t entry = tile_index 
-                           | (palette << 10) 
-                           | (priority << 13); 
+            // 7. Manual Modulo for X: Increment and reset if it hits asset width
+            local_x++;
+            if (local_x == asset_w) local_x = 0;
+        }
 
-            // 4. Write to buffer
-            map_buffer_bg1[map_offset] = entry;
-
-            tile_counter++;
+        // 8. Manual Modulo for Y: Increment and reset if it hits asset height
+        local_y++;
+        if (local_y == asset_h) {
+            local_y = 0;
+            row_start_index = 0;
+        } else {
+            // Instead of multiplying, just add the width for the next row
+            row_start_index += asset_w;
         }
     }
+}
 
-    // 5. Upload to VRAM
-    // IMPORTANT: Replace '0x6000' with the address you assigned to your BG 
-    // in your init code (e.g., bgSetMapPtr(0, 0x6000, SC_32x32)).
-    //dmaCopyVram(map_buffer_bg1, 0x6000, sizeof(map_buffer_bg1));
-	//dmaCopyVram(map_buffer_bg1, 0x6800, sizeof(map_buffer_bg1));
+void loadStageBackground(int index) {
+    // Note: I'm using 0x2000 (8KB) for tileset size as (64*8) is usually too small 
+    // for a full background. Adjust 0x2000 to match your actual .pic file size.
+    uint16_t tileSize = 0x2000; 
+    uint16_t palSize = 32; // 16 colors * 2 bytes
+    uint16_t vramAddr = 0x4000;
+	
+    switch (index) {
+        case 0: // BG_bk0
+            bgInitTileSet(1, BG_bk0, PAL_bk0, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        case 1: // BG_Black
+            bgInitTileSet(1, BG_Black, PAL_bkBlack, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        case 2: // BG_Blue (Village/Grasstown)
+        case 3: // BG_Blue (Main Artery)
+        case 14: // BG_Blue (Arthur's House)
+            bgInitTileSet(1, BG_Blue, PAL_bkBlue, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        case 4: // Balcony (Fog) - No Tileset
+            //dmaCopyPalette(PAL_bkFog, 1 * 16, palSize); // Load palette only
+            break;
+
+        case 5: // Sand Zone Storehouse
+            bgInitTileSet(1, BG_Gard, PAL_bkGard, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        case 6: // Boulder Chamber
+            bgInitTileSet(1, BG_Gray, PAL_bkGray, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        case 7: // Outer Wall (Moon) - No Tileset
+            //dmaCopyPalette(PAL_bkMoon, 1 * 16, palSize); // Load palette only
+            break;
+
+        case 8: // Labyrinth W
+            bgInitTileSet(1, BG_Maze, PAL_bkMaze, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        case 9: // Labyrinth I/O
+            bgInitTileSet(1, BG_Maze2, PAL_bkMaze, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        case 10: // Labyrinth M
+        case 12: // Hell
+            bgInitTileSet(1, BG_Red, PAL_bkRed, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        case 11: // Almond (Water) - No Tileset
+            //dmaCopyPalette(PAL_bkWater, 1 * 16, palSize); // Load palette only
+            break;
+
+        case 13: // Egg Corridor
+        case 16: // Sand Zone
+            bgInitTileSet(1, BG_Green, PAL_bkGreen, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        case 15: // Fall
+            bgInitTileSet(1, BG_Fall, PAL_bkFall, 1, tileSize, palSize, BG_16COLORS, vramAddr);
+            break;
+
+        default:
+            break;
+    }
+	bgSetEnable(0);
+	bgSetEnable(1);
+setMode(BG_MODE1, 0);   // Set Mode 1
+bgSetEnable(0);         // Explicitly enable BG0
+setScreenOn();          // Turn on display
 }
 void stage_load(uint16_t id) {
 	iprintf("Loading stage %d\n", id);
@@ -164,15 +247,20 @@ void stage_load(uint16_t id) {
     //z80_request();
 	//sheets_load_stage(id, FALSE, TRUE);
 	// Load backgrounds
-	/*if(background_info[stage_info[id].background].type == 4 || stageBackground != stage_info[id].background) {
+	if(background_info[stage_info[id].background].type == 4 || stageBackground != stage_info[id].background) {
 		stageBackground = stage_info[id].background;
 		stageBackgroundType = background_info[stageBackground].type;
 		vdp_set_backcolor(0); // Color index 0 for everything except fog
 		if(stageBackgroundType == 0 || stageBackgroundType == 3) { // Tiled image
 			vdp_set_scrollmode(HSCROLL_PLANE, VSCROLL_PLANE);
 			if(background_info[stageBackground].tileset != NULL)
+			{
+
 				vdp_tiles_load_from_rom(background_info[stageBackground].tileset, TILE_BACKINDEX, 
 						1024);
+				loadStageBackground(stageBackground);
+			}
+
 			stage_draw_background();
 		} else if(stageBackgroundType == 1) { // Moon
 			vdp_set_scrollmode(HSCROLL_TILE, VSCROLL_PLANE);
@@ -192,7 +280,7 @@ void stage_load(uint16_t id) {
 			vdp_set_backcolor(32);
 			stage_draw_moonback();
 		}
-	}*/
+	}
     //z80_release();
     enable_ints;
 
@@ -642,11 +730,11 @@ void stage_draw_tile(uint16_t x, uint16_t y, const uint8_t* pxa) {
 	if(priority > 0){
         // Foreground logic
         map_buffer_bg1[map_offset] = tile_entry;
-        map_buffer_bg2[map_offset] = empty_entry;
+        //map_buffer_bg2[map_offset] = empty_entry;
     } else {
         // Background logic
         map_buffer_bg1[map_offset] = empty_entry;
-        map_buffer_bg2[map_offset] = tile_entry;
+        //map_buffer_bg2[map_offset] = tile_entry;
     }
 }
 
@@ -764,6 +852,7 @@ void stage_draw_screen() {
 		}
 		y++;
 	}
+	dmaCopyVram(map_buffer_bg1, 0x6000, 2048);
 }
 void stage_draw_screen_credits() {
 	uint16_t maprow[20];
@@ -803,6 +892,9 @@ void stage_draw_background() {
 	uint16_t h = background_info[stageBackground].height;
 	uint16_t pal = background_info[stageBackground].palette;
 	uint16_t y, x;
+	test_draw_sequential();
+	dmaCopyVram(map_buffer_bg2, 0x6800, 2048);
+	return;
 	for( y = 0; y < 32; y += h) {
 		for( x = 0; x < 64; x += w) {
 			//vdp_map_fill_rect(BASE_BACK, TILE_ATTR(pal,0,0,0,TILE_BACKINDEX), x, y, w, h, 1);

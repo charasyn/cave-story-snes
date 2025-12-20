@@ -9,7 +9,7 @@ FASTROM := 1
 
 # BEFORE including snes_rules :
 # list in AUDIOFILES all your .it files in the right order. It will build to generate soundbank file
-AUDIOFILES := res/whatislove.it
+AUDIOFILES := res/WANPAK2.it res/VIVI.it
 # then define the path to generate soundbank data. The name can be different but do not forget to update your include in .c file !
 export SOUNDBANK := res/soundbank
 

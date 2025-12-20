@@ -195,17 +195,18 @@ int main(void)
     // allocate around 10K of sound ram (39 256-byte blocks)
     spcAllocateSoundRegion(39);
     // Load music
-    spcLoad(MOD_WHATISLOVE);
+    spcLoad(MOD_VIVI);
     // Load sample
     spcSetSoundEntry(15, 8, 6, &jumpsndend - &jumpsnd, &jumpsnd, &Jump);
 
     // Init background
     bgSetGfxPtr(1, 0x2000);
     bgSetMapPtr(0, 0x6000, SC_32x32);
+    bgSetGfxPtr(0, 0x4000);
     //bgInitTileSet(0, &UFTC_Cave, tileset_info[3].palette, 0, (tileset_info[stageTileset].size*32), 16 * 2, BG_16COLORS, 0x2000);
     bgSetMapPtr(1, 0x6800, SC_32x32);
 
-    bgSetDisable(2);
+    //bgSetDisable(2);
 
     // Now Put in 16 color mode and disable Bgs except current
     setMode(BG_MODE1, 0);

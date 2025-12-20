@@ -69,7 +69,7 @@ void vdp_hscroll(uint16_t plan, int16_t hscroll) {
 	{
 		//tileScrollX = -hscroll;
 		//scroll stage back too
-		bgSetScroll(2, -hscroll, prev_v);
+		//bgSetScroll(2, -hscroll, prev_v);
 	}
     prev_h = -hscroll;
 }
@@ -85,7 +85,7 @@ void vdp_vscroll(uint16_t plan, int16_t vscroll) {
 	{
 		//tileScrollX = vscroll;
 		//scroll stage back too
-		bgSetScroll(2, prev_h, vscroll);
+		//bgSetScroll(2, prev_h, vscroll);
 	}
     prev_v = vscroll;
 }

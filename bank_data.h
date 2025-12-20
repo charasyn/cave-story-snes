@@ -44,6 +44,7 @@ extern const uint16_t BG_Sand[];
 extern const uint16_t BG_Hell[];
 extern const uint16_t BG_Fall[];
 
+
 extern const uint16_t PAL_Mimi[];
 extern const uint16_t PAL_Eggs[];
 extern const uint16_t PAL_Maze[];
@@ -439,6 +440,26 @@ extern const uint16_t SPR_ItemWin_data[];
 extern const uint16_t SPR_Prompt_data[];
 extern const uint16_t SPR_J_Prompt_data[];
 extern const uint16_t SPR_XXIsland_data[];
+
+extern const uint16_t BG_Green [];
+extern const uint16_t BG_Moon [];
+extern const uint16_t BG_Fog [];
+
+extern const uint16_t BG_bk0 [];
+extern const uint16_t BG_Black [];
+
+extern const uint16_t PAL_bkBlue	 [];
+extern const uint16_t PAL_bkGard	[];
+extern const uint16_t PAL_bkMaze	[];
+extern const uint16_t PAL_bkGray	[];
+extern const uint16_t PAL_bkGreen	[];
+extern const uint16_t PAL_bkFall	[];
+extern const uint16_t PAL_bkWater	[];
+extern const uint16_t PAL_bkMoon	[];
+extern const uint16_t PAL_bkFog	[];
+extern const uint16_t PAL_bk0	[];
+extern const uint16_t PAL_bkBlack	[];
+extern const uint16_t PAL_bkRed	[];
 
 extern const uint8_t PXA_Almond[];
 extern const uint8_t PXA_Barr[];

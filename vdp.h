@@ -1,8 +1,8 @@
 #pragma once
 
 #define VDP_PLAN_W				((uint16_t)2)
-#define VDP_PLAN_A              ((uint16_t)1)
-#define VDP_PLAN_B              ((uint16_t)0)
+#define VDP_PLAN_A              0
+#define VDP_PLAN_B              1
 #define VDP_SPRITE_TABLE        ((uint16_t)0xF800)
 #define VDP_HSCROLL_TABLE       ((uint16_t)0xFC00)
 

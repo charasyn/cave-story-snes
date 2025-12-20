@@ -262,8 +262,9 @@ void game_main(uint8_t load) {
     	}
 
 		oamUpdate(); 
-		dmaCopyVram(map_buffer_bg2, 0x6000, 2048);
-        dmaCopyVram(map_buffer_bg1, 0x6800, 2048);
+		dmaCopyVram(map_buffer_bg1, 0x6000, 2048);
+        dmaCopyVram(map_buffer_bg2, 0x6800, 2048);
+		bgSetEnable(0);
 		stage_update();
 		joy_update();
 		PF_BGCOLOR(0x00E);
