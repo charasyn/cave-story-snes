@@ -86,7 +86,7 @@ uint16_t stageID = 0;
 
 // Shadow buffers in WRAM (RAM)
 // 64 * 32 tiles = 2048 entries * 2 bytes = 4096 bytes per layer
-uint16_t map_buffer_bg1[MAP_WIDTH * MAP_HEIGHT];
+uint16_t map_buffer_bg1[64 * MAP_HEIGHT];
 uint16_t map_buffer_bg2[MAP_WIDTH * MAP_HEIGHT];
 
 // Helper to construct SNES tile entry
@@ -701,42 +701,57 @@ uint16_t last_y = 0xFFFF;
 
 
 void stage_draw_tile(uint16_t x, uint16_t y, const uint8_t* pxa) {
-    // 1. Get Block Info (Same logic as GBA)
+    // 1. Get Meta-Block Info (from collision map or stage data)
+    // Assuming stage_get_block returns a meta-tile index (0-255)
     uint16_t b = stage_get_block(x >> 1, y >> 1);
-    uint16_t t = b << 2; // Base tile index for 16x16 meta-tile
+    
+    // 2. Get Tile Attributes from PXA array
+    // pxa[b] holds flags for palette, priority, etc.
     uint16_t ta = pxa[b];
-
-    // 2. Determine Attributes
-    // Adjust these masks based on your specific 'pxa' format data
-    uint16_t palette = (ta & 0x80) ? 0 : 0; // Example: Bit 7 determines palette 0 or 1
-    uint16_t priority = (ta & 0x40) ? 1 : 1; // Example: Bit 6 is priority
     
-    // Calculate final tile index (0-3) for the specific 8x8 part
-    uint16_t final_tile = TILE_TSINDEX + t + (x & 1) + ((y & 1) << 1);
-
-    // 3. Construct SNES Map Entry
-    uint16_t tile_entry = SNES_TILE_ENTRY(final_tile, palette, priority, 0, 0);
-    uint16_t empty_entry = SNES_TILE_ENTRY(TILE_TSINDEX, 0, 0, 0, 0); // Transparent/Empty tile
-
-    // 4. Calculate SNES Map Address Offset
-    // SNES maps are split into 32x32 chunks (1024 entries each).
-    // If x >= 32, we move to the next 32x32 block which is 1024 words away in memory.
-    // Address = (Y * 32) + (X % 32) + (IsRightHalf ? 1024 : 0)
+    // 3. Calculate Base Tile Index
+    // 'b << 2' implies each meta-block consists of 4 hardware tiles (2x2)
+    uint16_t base_tile = b << 2; 
     
-    uint16_t map_offset = ((y % 32) * 32) + (x % 32);
+    // Calculate the specific quadrant (0, 1, 2, or 3)
+    // (x&1) adds 1 for right half, ((y&1)<<1) adds 2 for bottom half
+    uint16_t final_tile_index = TILE_TSINDEX + base_tile + (x & 1) + ((y & 1) << 1);
 
-    // 5. Write to Shadow Buffers
-    // PVSnesLib doesn't support direct VRAM pointers like MAP_BASE_ADR.
-	if(priority > 0){
-        // Foreground logic
-        map_buffer_bg1[map_offset] = tile_entry;
-        //map_buffer_bg2[map_offset] = empty_entry;
-    } else {
-        // Background logic
-        map_buffer_bg1[map_offset] = empty_entry;
-        //map_buffer_bg2[map_offset] = tile_entry;
+    // 4. Decode Attributes
+    // Example interpretation of 'ta' byte:
+    // Bit 7: Palette (0 or 1)
+    // Bit 6: Priority
+    // Adjust masks to match your actual data format
+    uint16_t palette = (ta & 0x80) ? 0 : 0; 
+    uint16_t priority = (ta & 0x40) ? 1 : 1; 
+
+    // 5. Construct SNES Map Entry
+    // Format: vhopppcc cccccccc (v=vflip, h=hflip, o=prio, p=pal, c=char)
+    uint16_t tile_entry = SNES_TILE_ENTRY(final_tile_index, palette, priority, 0, 0);
+
+    // 6. Calculate Offset for 64x32 Map Layout
+    // SNES 64x32 mode stores two 32x32 screens linearly.
+    // Screen A: offsets 0-1023
+    // Screen B: offsets 1024-2047
+    
+    // Mask X to 63 (map width) and Y to 31 (map height)
+    uint16_t map_x = x & 63;
+    uint16_t map_y = y & 31;
+    
+    // Base offset within a 32x32 block
+    uint16_t offset = (map_y << 5) + (map_x & 31);
+    
+    // If we are in the right half (x >= 32), add 1024 (0x400)
+    if (map_x >= 32) {
+        offset += 1024;
     }
+
+    // 7. Write to Shadow Buffer
+    // Note: This does not update VRAM instantly. 
+    // You must DMA 'map_buffer_bg1' to VRAM during VBlank or use setMapEntry if doing one by one.
+    map_buffer_bg1[offset] = tile_entry;
 }
+
 
 
 void stage_update_screen(u16 view_x, u16 view_y) {
@@ -893,7 +908,9 @@ void stage_draw_background() {
 	uint16_t pal = background_info[stageBackground].palette;
 	uint16_t y, x;
 	test_draw_sequential();
-	dmaCopyVram(map_buffer_bg2, 0x6800, 2048);
+	vdp_vsync();
+	dmaCopyVram(map_buffer_bg2, 0x7000, 2048);
+	vdp_vsync();
 	return;
 	for( y = 0; y < 32; y += h) {
 		for( x = 0; x < 64; x += w) {

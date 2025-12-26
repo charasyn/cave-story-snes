@@ -175,7 +175,7 @@ static void camera_handle_morphing(long long *x_next, long long *y_next) {
 				morphingColumn = 0;
 				*x_next = camera.x;
 			} else {
-				int16_t x = sub_to_tile(*x_next) + (morphingColumn == 1 ? 15 : -15);
+				int16_t x = sub_to_tile(*x_next) + (morphingColumn == 1 ? 16 : -16);
 				int16_t y = sub_to_tile(*y_next) - 10;
 				if(x >= -32 && x < (int16_t)(stageWidth+32) << 1) {
 					uint16_t i;
@@ -192,11 +192,11 @@ static void camera_handle_morphing(long long *x_next, long long *y_next) {
 				morphingRow = 0;
 				*y_next = camera.y;
 			} else {
-				int16_t y = sub_to_tile(*y_next) + (morphingRow == 1 ? 10 : -10);
-				int16_t x = sub_to_tile(*x_next) - 15;
+				int16_t y = sub_to_tile(*y_next) + (morphingRow == 1 ? 14 : -14);
+				int16_t x = sub_to_tile(*x_next) - 16;
 				if(y >= -32 && y < (int16_t)(stageHeight+32) << 1) {
 					uint16_t i;
-					for(i = 32; i--; ) {
+					for(i = 64; i--; ) {
 						stage_draw_tile(x, y, pxa);
 						x++;
 					}

@@ -203,10 +203,10 @@ int main(void)
 
     // Init background
     bgSetGfxPtr(1, 0x2000);
-    bgSetMapPtr(0, 0x6000, SC_32x32);
+    bgSetMapPtr(0, 0x6000, SC_64x32);
     bgSetGfxPtr(0, 0x4000);
     //bgInitTileSet(0, &UFTC_Cave, tileset_info[3].palette, 0, (tileset_info[stageTileset].size*32), 16 * 2, BG_16COLORS, 0x2000);
-    bgSetMapPtr(1, 0x6800, SC_32x32);
+    bgSetMapPtr(1, 0x7000, SC_32x32);
 
     //bgSetDisable(2);
 
