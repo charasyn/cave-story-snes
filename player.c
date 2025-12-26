@@ -103,7 +103,7 @@ static void player_prev_weapon();
 static void player_next_weapon();
 
 u8 pal_mode = true;
-Entity *water_entity;
+Entity *water_entity = NULL;
 
 void sound_play(uint8_t id, uint8_t priority)
 {
@@ -117,6 +117,9 @@ int random()
 
 // Default values for player
 void player_init() {
+	memset(&player, 0, sizeof(Entity));
+    playerBoostState = 0; // Ensure booster state is OFF (BOOST_OFF)
+
 	controlsLocked = FALSE;
 	player.hidden = FALSE;
 	player.dir = 0;
@@ -320,7 +323,7 @@ void player_draw() {
 }
 void player_update() {
 	uint8_t tile = stage_get_block_type(sub_to_block(player.x), sub_to_block(player.y));
-	//iprintf("Player Tile: %d\n", tile);
+
 	if(!playerMoveMode) { // Normal movement
 		// Wind/Water current
 		if(tile & 0x80) {
@@ -655,6 +658,8 @@ static void player_update_walk() {
 	int16_t acc;
 	int16_t fric;
 	int16_t max_speed;
+	
+    // Calculate standard physics values
 	if(pal_mode || cfg_60fps) {
 		max_speed = 810;
 		if(player.grounded) {
@@ -674,9 +679,24 @@ static void player_update_walk() {
 			fric = 0;
 		}
 	}
-	// 2 kinds of water, actual water blocks & background water in Core
-	if((blk(player.x, 0, player.y, 0) & BLOCK_WATER) ||
-			(stageBackgroundType == 4 && water_entity && player.y > water_entity->y)) {
+
+    // --- COMPILER FIX: Split complex condition into simple bools ---
+    uint8_t in_water = 0;
+    
+    // Check 1: Water blocks
+    if (blk(player.x, 0, player.y, 0) & BLOCK_WATER) {
+        in_water = 1;
+    } 
+    // Check 2: Background water
+    else if (stageBackgroundType == 4) {
+        if (water_entity) {
+            if (player.y > water_entity->y) {
+                in_water = 1;
+            }
+        }
+    }
+
+	if(in_water) {
 		if(!player.underwater) {
 			player.underwater = TRUE;
 			sound_play(SND_SPLASH, 5);
@@ -684,21 +704,22 @@ static void player_update_walk() {
 			effect_create_misc(EFF_SPLASH, player.x >> CSF, player.y >> CSF, FALSE);
 			effect_create_misc(EFF_SPLASH, player.x >> CSF, player.y >> CSF, FALSE);
 		}
-		// Half everything, maybe inaccurate?
+		// Halve physics for water
 		acc >>= 1;
 		max_speed >>= 1;
 		fric >>= 1;
 	} else {
 		player.underwater = FALSE;
 	}
-	// Stop player from moving faster if they exceed max speed
+
+	// Apply movement
 	if(joy_down(KEY_LEFT)) {
 		if(player.x_speed >= -max_speed) player.x_speed -= acc;
 	}
 	if(joy_down(KEY_RIGHT)) {
 		if(player.x_speed <= max_speed) player.x_speed += acc;
 	}
-	// But only slow them down on the ground
+	
 	if(player.grounded) {
 		if(abs(player.x_speed) <= fric) player.x_speed = 0;
 		else if(player.x_speed < 0) player.x_speed += fric;
@@ -729,6 +750,7 @@ static void player_update_jump() {
 		gravityJump >>= 1;
 		maxFallSpeed >>= 1;
 	}
+
 	if(player.jump_time > 0) {
 		if(joy_down(btn[cfg_btn_jump])) {
 			player.jump_time--;
@@ -737,6 +759,7 @@ static void player_update_jump() {
 		}
 	}
 	if(player.jump_time > 0) return;
+
 	if(player.grounded) {
 		if(joy_pressed(btn[cfg_btn_jump])) {
 			player.grounded = FALSE;
@@ -747,17 +770,31 @@ static void player_update_jump() {
 			spcPlaySound(0);
 			sound_play(SND_PLAYER_JUMP, 3);
 		}
-	} else if((playerEquipment & (EQUIP_BOOSTER08 | EQUIP_BOOSTER20)) &&
-			joy_pressed(btn[cfg_btn_jump])) {
-		player_start_booster();
-	} else if(playerBoostState == BOOST_OFF) {
-		if(joy_down(btn[cfg_btn_jump]) && (player.y_speed < 0 || player.underwater)) {
-			player.y_speed += gravityJump;
-		} else {
-			player.y_speed += gravity;
-		}
-		if(player.y_speed > maxFallSpeed) player.y_speed = maxFallSpeed;
-	}
+	} else {
+        // Compiler Workaround: Split the complex 'else if' condition into nested checks.
+        // This prevents the "Jump to Success on Failure" assembly bug.
+        uint8_t can_boost = 0;
+        if (playerEquipment & (EQUIP_BOOSTER08 | EQUIP_BOOSTER20)) {
+            if (joy_pressed(btn[cfg_btn_jump])) {
+                can_boost = 1;
+            }
+        }
+
+        if(can_boost) {
+            player_start_booster();
+        } 
+        // Apply Gravity if booster is OFF or if using Booster 0.8 (which needs gravity)
+        else if(playerBoostState == BOOST_OFF) {
+            // iprintf("Grav Apply. Y_Spd: %d\n", player.y_speed);
+
+            if(joy_down(btn[cfg_btn_jump]) && (player.y_speed < 0 || player.underwater)) {
+                player.y_speed += gravityJump;
+            } else {
+                player.y_speed += gravity;
+            }
+            if(player.y_speed > maxFallSpeed) player.y_speed = maxFallSpeed;
+        }
+    }
 }
 
 static void player_update_float() {

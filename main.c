@@ -40,8 +40,6 @@ enum
 extern char tileset, tilesetend, tilepal;
 extern char tilesetdef, tilesetatt; // for map & tileset of map
 
-extern char mapmario, objmario;
-
 extern char mariogfx, mariogfx_end;
 extern char mariopal;
 
@@ -196,7 +194,7 @@ int main(void)
     // allocate around 10K of sound ram (39 256-byte blocks)
     spcAllocateSoundRegion(39);
     // Load music
-    spcLoad(MOD_VIVI);
+    spcLoad(MOD_GESTATION);
     // Load sample
     spcSetSoundEntry(15, 8, 6, &walksndend - &walksnd, &walksnd, &walksnd);
     spcSetSoundEntry(15, 8, 6, &jumpsndend - &jumpsnd, &jumpsnd, &Jump);
@@ -236,9 +234,6 @@ int main(void)
 
     // Init function for state machine
     objInitFunctions(0, &marioinit, &marioupdate, NULL);
-
-    // Load all objects into memory
-    objLoadObjects((char *)&objmario);
 
     uint16_t frame = 0;
 

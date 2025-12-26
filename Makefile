@@ -1,4 +1,4 @@
-.PRECIOUS: %.asm
+#.PRECIOUS: %.asm
 
 ifeq ($(strip $(PVSNESLIB_HOME)),)
 $(error "Please create an environment variable PVSNESLIB_HOME by following this guide: https://github.com/alekmaul/pvsneslib/wiki/Installation")
@@ -9,7 +9,7 @@ FASTROM := 1
 
 # BEFORE including snes_rules :
 # list in AUDIOFILES all your .it files in the right order. It will build to generate soundbank file
-AUDIOFILES := res/WANPAK2.it res/VIVI.it
+AUDIOFILES := res/WANPAK2.it res/Gestation.it
 # then define the path to generate soundbank data. The name can be different but do not forget to update your include in .c file !
 export SOUNDBANK := res/soundbank
 
@@ -55,21 +55,9 @@ pvsneslibfont.pic: pvsneslibfont.bmp
 	@echo convert font with no tile reduction ... $(notdir $@)
 	$(GFXCONV) -s 8 -o 2 -u 16 -p -e 1 -t bmp -i $<
 
-dancer.pic: dancer.png
-	@echo convert font with no tile reduction ... $(notdir $@)
-	$(GFXCONV) -s 32 -o 4 -u 16 -p -t png -i $<
-
 mario_sprite.pic: mario_sprite.bmp
 	@echo convert sprites ... $(notdir $@)
 	$(GFXCONV) -s 16 -o 16 -u 16 -p -t bmp -i $<
-
-tiles.pic: tiles.png
-	@echo convert map tileset... $(notdir $@)
-	$(GFXCONV) -s 8 -o 16 -u 16 -p -m -i $<
-
-map_1_1.m16: map_1_1.tmj tiles.pic
-	@echo convert map tiled ... $(notdir $@)
-	$(TMXCONV) $< tiles.map
 
 mariofont.pic: mariofont.bmp
 	@echo convert font with no tile reduction ... $(notdir $@)
@@ -81,4 +69,4 @@ mariofont.pic: mariofont.bmp
 	@echo converting stage gfx $< ...
 	$(GFXCONV) -s 8 -o 16 -u 16 -p -m -R -i $<
 
-bitmaps : pvsneslibfont.pic dancer.pic PrtCave_vert.pic tiles.pic mariofont.pic map_1_1.m16 mario_sprite.pic $(STAGE_PICS)
+bitmaps : pvsneslibfont.pic PrtCave_vert.pic mariofont.pic mario_sprite.pic $(STAGE_PICS)
