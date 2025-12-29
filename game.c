@@ -241,7 +241,7 @@ void game_main(uint8_t load) {
 		spcProcess();
 		vdp_vsync();
 
-		dmaCopyVram(map_buffer_bg1, 0x6000, 4096);
+		camera_execute_dma();
         //dmaCopyVram(map_buffer_bg2, 0x7000, 2048);
 		oamUpdate(); 
     	// 3. Increment our counter because we successfully finished one frame

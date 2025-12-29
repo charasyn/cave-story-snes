@@ -160,6 +160,82 @@ static inline void camera_update_culling() {
 	camera_ysize = pixel_to_sub(SCREEN_HEIGHT + 160);
 }
 
+enum DMA_UPLOAD_TYPE {
+	DMA_UPLOAD_ALL = 0,
+	DMA_UPLOAD_ROW = 1,
+	DMA_UPLOAD_COLUMN = 2,
+	DMA_UPLOAD_NONE = 3
+};
+static int8_t dmaUploadType = DMA_UPLOAD_ALL;
+static int8_t dmaUploadPosition = 0;
+
+void camera_execute_dma() {
+	uint16_t offset;
+	uint16_t *datasrc;
+	uint16_t i;
+	switch (dmaUploadType) {
+		case DMA_UPLOAD_ALL:
+			dmaCopyVram((u8 *)(map_buffer_bg1), 0x6000, 4096);
+			break;
+		case DMA_UPLOAD_ROW:
+			// dmaUploadPosition is equivalent to map_y
+			offset = dmaUploadPosition<<5;
+			// DMA row in the "left" tilemap from BG buffer to VRAM
+			dmaCopyVram7(
+				(u8 *)(map_buffer_bg1+offset),
+				0x6000|offset,
+				64,
+				0x80,
+				0x1802
+			);
+			// DMA row in the "right" tilemap from BG buffer to VRAM
+			offset |= 1024;
+			dmaCopyVram7(
+				(u8 *)(map_buffer_bg1+offset),
+				0x6000|offset,
+				64,
+				0x80,
+				0x1802
+			);
+			break;
+		case DMA_UPLOAD_COLUMN:
+			// dmaUploadPosition is equivalent to map_x
+			// It will be slower to copy data to an array to set up column DMA
+			// than it will be to just write the data directly.
+			offset = (dmaUploadPosition&31);
+			if (dmaUploadPosition&32) {
+				offset |= 1024;
+			}
+			datasrc = map_buffer_bg1+offset;
+			REG_VMAIN = 0x81;
+			REG_VMADDLH = 0x6000|offset;
+			for (i = 32; --i;) {
+				REG_VMDATALH = *datasrc;
+				datasrc += 32;
+			}
+			break;
+		default:
+			break;
+	}
+	dmaUploadType = DMA_UPLOAD_NONE;
+}
+
+static void camera_mark_dma_row(int16_t y) {
+	if (dmaUploadType != DMA_UPLOAD_NONE) { return; }
+	dmaUploadType = DMA_UPLOAD_ROW;
+	dmaUploadPosition = y & 31;
+}
+
+static void camera_mark_dma_column(int16_t x) {
+	if (dmaUploadType != DMA_UPLOAD_NONE) { return; }
+	dmaUploadType = DMA_UPLOAD_COLUMN;
+	dmaUploadPosition = x & 63;
+}
+
+void camera_mark_dma_full_screen() {
+	dmaUploadType = DMA_UPLOAD_ALL;
+}
+
 // Handle stage morphing (tile drawing) for camera movement
 static void camera_handle_morphing(long long *x_next, long long *y_next) {
 	morphingColumn = sub_to_tile(*x_next) - sub_to_tile(camera.x);
@@ -178,6 +254,7 @@ static void camera_handle_morphing(long long *x_next, long long *y_next) {
 				int16_t x = sub_to_tile(*x_next) + (morphingColumn == 1 ? 16 : -16);
 				int16_t y = sub_to_tile(*y_next) - 10;
 				if(x >= -32 && x < (int16_t)(stageWidth+32) << 1) {
+					camera_mark_dma_column(x);
 					uint16_t i;
 					for(i = 32; i--; ) {
 						stage_draw_tile(x, y, pxa);
@@ -195,6 +272,7 @@ static void camera_handle_morphing(long long *x_next, long long *y_next) {
 				int16_t y = sub_to_tile(*y_next) + (morphingRow == 1 ? 14 : -14);
 				int16_t x = sub_to_tile(*x_next) - 16;
 				if(y >= -32 && y < (int16_t)(stageHeight+32) << 1) {
+					camera_mark_dma_row(y);
 					uint16_t i;
 					for(i = 64; i--; ) {
 						stage_draw_tile(x, y, pxa);
